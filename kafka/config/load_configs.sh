@@ -9,3 +9,6 @@ sudo cp ./etc/kafka/connect-distributed.properties /etc/kafka/connect-distribute
 sudo cp ./etc/kafka/zookeeper.properties /etc/kafka/zookeeper.properties
 sudo cp ./etc/kafka/connect-standalone.properties /etc/kafka/connect-standalone.properties
 sudo cp ./etc/kafka/server.properties /etc/kafka/server.properties
+
+sudo mkdir /var/lib/kafka-streams
+sudo chmod 777 -R /var/lib/kafka-streams
