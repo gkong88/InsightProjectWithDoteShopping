@@ -49,7 +49,7 @@ def main():
     example = open("shoppable_fit_example.json").read()
     flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json").read()))
     broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
-    topic = ''.join(c for c in str(flatJSON['event'])if c.isalnum())
+    topic = ''.join(c for c in str(flatJSON['event'])if c.isalnum()) + "_00_raw_flatJSON"
     write_schema_to_file(flatJSON, topic)
 
     # load kafka config details
