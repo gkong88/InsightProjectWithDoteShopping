@@ -1,6 +1,7 @@
 import json
 import confluent_kafka
 import time
+import flatten_json
 
 class EventGenerator():
     def __init__(self, csvPathString):
@@ -35,10 +36,10 @@ def main():
     generator = EventGenerator("snapshot.csv")
     # load an example json
     example = open("shoppable_fit_example.json").read()
-    exampleJson = json.loads(open("shoppable_fit_example.json").read())
+    flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json").read()))
     # service discovery
     broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"      
-    topic = "ViewedShoppableFit3"
+    topic = "ViewedShoppableFit4"
     # load kafka config details
     conf = {'bootstrap.servers': "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092"}
     # initialize a connection to kafka producer
@@ -47,7 +48,7 @@ def main():
     while True:
         key = generator.get()
         # sendHTTPmessage(key, example)
-        p.produce(topic, example, key)
+        p.produce(topic, json.dumps(flatJSON), key)
         counter += 1
         if counter % 50 == 0:
             print("50 messages sent")
