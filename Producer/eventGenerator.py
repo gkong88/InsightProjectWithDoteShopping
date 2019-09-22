@@ -63,7 +63,6 @@ def main():
         p.produce(topic, json.dumps(flatJSON), key)
         counter += 1
         if counter % 50 == 0:
-            print("50 messages sent")
             counter = 0
             time.sleep(1)
 
