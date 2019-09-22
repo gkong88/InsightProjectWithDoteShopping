@@ -5,10 +5,10 @@ import time
 class EventGenerator():
     def __init__(self, csvPathString):
         self.csvPathString = csvPathString
-        self.__readFile__(csvPathString)
+        self.__readFile__()
 
-    def __readFile__(self, csvPathString):
-        self.fid = open(csvPathString)
+    def __readFile__(self):
+        self.fid = open(self.csvPathString)
         self.fid.readline() #discard header
         self.count = 0
         
