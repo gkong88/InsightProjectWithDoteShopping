@@ -2,6 +2,7 @@ import json
 import confluent_kafka
 import time
 import flatten_json
+import pdb
 
 class EventGenerator():
     def __init__(self, csvPathString):
@@ -38,8 +39,9 @@ def main():
     example = open("shoppable_fit_example.json").read()
     flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json").read()))
     # service discovery
-    broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"      
-    topic = "ViewedShoppableFit4"
+    broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
+    topic = ''.join(c for c in str(flatJSON['event'])if c.isalnum())
+
     # load kafka config details
     conf = {'bootstrap.servers': "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092"}
     # initialize a connection to kafka producer
