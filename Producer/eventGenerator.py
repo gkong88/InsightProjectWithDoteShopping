@@ -1,10 +1,6 @@
 import json
-import pdb
 import confluent_kafka
 import time
-import random
-from datetime import datetime
-from dateutil.parser import parse
 
 class EventGenerator():
     def __init__(self, csvPathString):
@@ -14,8 +10,6 @@ class EventGenerator():
     def __readFile__(self, csvPathString):
         self.fid = open(csvPathString)
         self.fid.readline() #discard header
-        self.streamEventTimeStart = parse(self.fid.readline().split(',')[1])
-        self.timerStart = datetime.now()
         self.count = 0
         
     """
@@ -40,21 +34,23 @@ def sendHTTPmessage():
 def main():
     generator = EventGenerator("snapshot_posts.csv")
     # load an example json
-    example = json.loads(open("shoppable_fit_example.json").read())
+    example = open("shoppable_fit_example.json").read()
+    exampleJson = json.loads(open("shoppable_fit_example.json").read())
     # service discovery
     broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"      
-    topic = "Viewed Shoppable Fit"
+    topic = "ViewedShoppableFit2"
     # load kafka config details
-    conf = {'bootstrap.servers': broker}
+    conf = {'bootstrap.servers': "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092"}
     # initialize a connection to kafka producer
     p = confluent_kafka.Producer(**conf)
     counter = 0
     while True:
         key = generator.get()
         # sendHTTPmessage(key, example)
-        p.produce(topic, example, key)
+        p.produce(topic, "val", key)
         counter += 1
-        if counter % 20 == 0:
+        if counter % 50 == 0:
+            print("50 messages sent")
             counter = 0
             time.sleep(1)
 
