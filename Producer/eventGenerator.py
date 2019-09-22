@@ -32,7 +32,7 @@ def sendHTTPmessage():
 
 
 def main():
-    generator = EventGenerator("snapshot_posts.csv")
+    generator = EventGenerator("snapshot.csv")
     # load an example json
     example = open("shoppable_fit_example.json").read()
     exampleJson = json.loads(open("shoppable_fit_example.json").read())
