@@ -32,15 +32,25 @@ class EventGenerator():
 def sendHTTPmessage():
     pass
 
+def write_schema_to_file(flatJSON, topic):
+    """
+    Writes flatJSON to a file.
+
+    Useful when selecting attributes in KSQL
+    """
+    fid = open(topic + ".json", 'w')
+    fid.write(json.dumps(flatJSON))
+    fid.close()
+
 
 def main():
     generator = EventGenerator("snapshot.csv")
     # load an example json
     example = open("shoppable_fit_example.json").read()
     flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json").read()))
-    # service discovery
     broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
     topic = ''.join(c for c in str(flatJSON['event'])if c.isalnum())
+    write_schema_to_file(flatJSON, topic)
 
     # load kafka config details
     conf = {'bootstrap.servers': "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092"}
