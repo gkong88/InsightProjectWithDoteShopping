@@ -26,8 +26,7 @@ class EventGenerator():
             self.__readFile__()
             line = self.fid.readline()
         row = line.split(',')
-        key = row[0]
-        return key
+        return row[0], row[1]
 
 def sendHTTPmessage():
     pass
@@ -58,9 +57,18 @@ def main():
     p = confluent_kafka.Producer(**conf)
     counter = 0
     while True:
-        key = generator.get()
-        # sendHTTPmessage(key, example)
-        p.produce(topic, json.dumps(flatJSON), key)
+        key, view = generator.get()
+        pdb.set_trace()
+        vlatJSON["properties_shoppable_post_id"]= str(key)
+        flatJSON["properties_display"] = str(view)
+        try:
+            p.produce(topic, json.dumps(flatJSON), key)
+            p.poll(0)
+        except BufferError as e:
+            print("FUCK!")
+            print(e, file = sys.stderr)
+            producer.poll(1)
+
         counter += 1
         if counter % 50 == 0:
             counter = 0
