@@ -45,13 +45,11 @@ def write_schema_to_file(flatJSON, topic):
 def main():
     generator = EventGenerator("snapshot.csv")
     # load an example json
-    example = open("shoppable_fit_example.json").read()
-    regJSON = json.loads(open("shoppable_fit_example.json").read())
-    flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json").read()))
+    example = open("shoppable_fit_example.json",'r').read()
+    flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json",'r').read()))
     broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
     topic = ''.join(c for c in str(flatJSON['event'])if c.isalnum()) + "_00_raw_flatJSON"
     write_schema_to_file(flatJSON, topic)
-
     # load kafka config details
     conf = {'bootstrap.servers': "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092"}
     # initialize a connection to kafka producer
@@ -61,16 +59,13 @@ def main():
         key, view = generator.get()
         flatJSON["properties_shoppable_post_id"]= str(key)
         flatJSON["properties_display"] = str(view)
-        regJSON["properties"]["shoppable_post_id"] = str(key)
-        regJSON["properties"]["display"] = str(view)
         if view == 'full view':
             flatJSON["isfullview"] = 1
         else:
             flatJSON["isfullview"] = 0
             
-        p.produce(topic, json.dumps(flatJSON).replace(' ',''), str(key).replace(' ',''))
+        p.produce(topic, json.dumps(flatJSON), str(key))
         p.poll(0)
-
         counter += 1
         if counter % 10 == 0:
             counter = 0
