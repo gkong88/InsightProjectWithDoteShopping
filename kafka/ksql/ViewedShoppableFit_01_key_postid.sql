@@ -1,15 +1,21 @@
-DROP STREAM ViewedShoppableFit_01_key_postid;
-
-CREATE STREAM foobar3
+CREATE STREAM ViewedShoppableFit_01_key_postidKLUGE2
     (
         event VARCHAR,
-        properties STRUCT <
-            display VARCHAR,
-            shoppable_post_id VARCHAR>
+        timestamp VARCHAR,
+        properties_display VARCHAR,
+        properties_shoppable_post_id BIGINT, 
+        properties_origin VARCHAR,
     )
-    WITH (KAFKA_TOPIC = 'ViewedShoppableFit_00_raw_JSON',
-          VALUE_FORMAT = 'JSON'
-    );
+    WITH (KAFKA_TOPIC = 'ViewedShoppableFit_00_raw_flatJSON',
+          VALUE_FORMAT = 'JSON',
+          KEY = 'properties_shoppable_post_id'
+          /* 
+          timestamp = 'timestamp',
+                            "2019-09-21T20:31:07.942Z"
+           TIMESTAMP_FORMAT = 'yyyy-MM-dd''T''HH:mm:ss.SSS''Z'''
+            */
+          );
+
 
 
 CREATE STREAM ViewedShoppableFit_01_key_postid 
@@ -31,20 +37,30 @@ CREATE STREAM ViewedShoppableFit_01_key_postid
           );
 
 
-DROP STREAM ViewedShoppableFit_02_key_postid_full_views_only;
 
-CREATE STREAM ViewedShoppableFit_02_key_postid_full_views_only AS
- select * from ViewedShoppableFit_01_key_postid
- where PROPERTIES_DISPLAY = 'full view';
-    
-    
-    DROP STREAM ViewedShoppableFit_03_key_postid_previews_only;
+CREATE STREAM ViewedShoppableFit_01_key_postid_fullviewonly as 
+    select * from ViewedShoppableFit_01_key_postid where properties_display = 'full view';
 
-CREATE STREAM ViewedShoppableFit_03_key_postid_previews_only AS
- select * from ViewedShoppableFit_01_key_postid
- where PROPERTIES_DISPLAY = 'preview';
-    
-    
-    CREATE STREAM recast2 AS
- select properties_display as disp, properties_shoppable_post_id as pid from ViewedShoppableFit_01_key_postid
- where properties_display = 'full view';
+
+
+
+create table hottest_posts_15_min2 as 
+select event, PROPERTIES_SHOPPABLE_POST_ID, count(*)*100000000 +  PROPERTIES_SHOPPABLE_POST_ID as count_post
+from ViewedShoppableFit_01_key_postidKLUGE
+window tumbling (size 15 minute) 
+where properties_display = 'full view'
+group by event, PROPERTIES_SHOPPABLE_POST_ID;
+
+
+CREATE STREAM hottest_posts3
+    (
+        event VARCHAR
+        count_post BIGINT
+    )
+    WITH (KAFKA_TOPIC = 'hottest_posts_15_min2',
+          VALUE_FORMAT = 'JSON',
+          KEY = 'timestampType'
+          );
+
+
+SELECT TOPK(count_post, 5) FROM hottest_posts_15_min2 group by event;
