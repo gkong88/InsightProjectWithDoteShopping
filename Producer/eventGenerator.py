@@ -58,19 +58,17 @@ def main():
     counter = 0
     while True:
         key, view = generator.get()
-        pdb.set_trace()
-        vlatJSON["properties_shoppable_post_id"]= str(key)
+        flatJSON["properties_shoppable_post_id"]= str(key)
         flatJSON["properties_display"] = str(view)
         try:
             p.produce(topic, json.dumps(flatJSON), key)
             p.poll(0)
         except BufferError as e:
-            print("FUCK!")
             print(e, file = sys.stderr)
             producer.poll(1)
 
         counter += 1
-        if counter % 50 == 0:
+        if counter % 20 == 0:
             counter = 0
             time.sleep(1)
 
