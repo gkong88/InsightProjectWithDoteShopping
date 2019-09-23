@@ -18,9 +18,6 @@ todos = {"0": "0 lives here"}
 # type, associated data,
 # relationship to other resources
 # and methods to operate on it
-class HelloWorld(Resource):
-    def get(self):
-        return {'I am a REST API that interacts with Kafka Event Log and Streaming Analytics Platform':'1'}
 
 class TodoSimple(Resource):
     def get(self, todo_id):
