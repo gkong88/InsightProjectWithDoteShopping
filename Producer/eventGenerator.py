@@ -25,7 +25,7 @@ class EventGenerator():
         if len(line) == 0:
             self.__readFile__()
             line = self.fid.readline()
-        row = line.split(',')
+        row = line.strip().split(',')
         return row[0], row[1]
 
 def sendHTTPmessage():
@@ -46,6 +46,7 @@ def main():
     generator = EventGenerator("snapshot.csv")
     # load an example json
     example = open("shoppable_fit_example.json").read()
+    regJSON = json.loads(open("shoppable_fit_example.json").read())
     flatJSON = flatten_json.flatten(json.loads(open("shoppable_fit_example.json").read()))
     broker = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
     topic = ''.join(c for c in str(flatJSON['event'])if c.isalnum()) + "_00_raw_flatJSON"
@@ -60,15 +61,18 @@ def main():
         key, view = generator.get()
         flatJSON["properties_shoppable_post_id"]= str(key)
         flatJSON["properties_display"] = str(view)
-        try:
-            p.produce(topic, json.dumps(flatJSON), key)
-            p.poll(0)
-        except BufferError as e:
-            print(e, file = sys.stderr)
-            producer.poll(1)
+        regJSON["properties"]["shoppable_post_id"] = str(key)
+        regJSON["properties"]["display"] = str(view)
+        if view == 'full view':
+            flatJSON["isfullview"] = 1
+        else:
+            flatJSON["isfullview"] = 0
+            
+        p.produce(topic, json.dumps(flatJSON).replace(' ',''), str(key).replace(' ',''))
+        p.poll(0)
 
         counter += 1
-        if counter % 20 == 0:
+        if counter % 10 == 0:
             counter = 0
             time.sleep(1)
 
