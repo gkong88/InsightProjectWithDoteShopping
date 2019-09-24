@@ -10,5 +10,7 @@ Ref: https://github.com/segment-integrations/connect-kafka
 
 
 pip3 install confluent-kafka
-pip3 install "confluent-kafka[avro]"
-pip3 install --no-binary :all: confluent-kafka
+pip3 install flask
+pip3 install flask_restful
+pip3 install flatten_json
+pip3 install typing
