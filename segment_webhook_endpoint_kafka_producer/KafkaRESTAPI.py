@@ -26,21 +26,24 @@ class SegmentKafkaProducer:
     """
     Takes segment events and creates Kafka events
     """
-    def __init__(self, kafkaConfig: str, topicJsonKey, keyJsonKey: str = None, keyTimestamp: str = None):
+    def __init__(self, secretFilePath: str, kafkaConfig: str, topicJsonKey, keyJsonKey: str = None, keyTimestamp: str = None):
         self.topicJsonKey = topicJsonKey
         self.keyJsonKey = keyJsonKey
         self.keyTimestamp = keyTimestamp
         self.kafkaProducer = confluent_kafka.Producer(**kafkaConfig)
+        with open(secretFilePath, 'r') as secretFile:
+            self.segmentSharedSecret = open(secretFilePath, 'r').read()
 
-    def produce(self, jsonObject):
-        """
-        :param topicJsonKey: string of key that should be extracted from json to set kafka event topic
-        :param keyJsonKey: string of key that should be extracted from json to set kafka event key
-        :return:
-        """
-        flattenedJsonObject = flatten_json.flatten(json.loads(jsonObject))
-        topic = ''.join(c for c in str(flattenedJsonObject[self.topicJsonKey])if c.isalnum()) + "_00_raw_flatJSON"
+    def validate(self, signature):
 
+
+    def produce(self, request):
+        """
+        #TODO
+        """
+
+        flattenedJsonObject = flatten_json.flatten(json.loads(request.data))
+        topic = ''.join(c for c in str(flattenedJsonObject["type"] + flattenedJsonObject[self.topicJsonKey])if c.isalnum()) + "_00_raw_flatJSON"
         key = flattenedJsonObject.get(self.keyJsonKey)
         if self.keyTimestamp is not None:
             timestamp = segment_timestamp_to_unix_millis(flattenedJsonObject.get(self.keyTimestamp))
@@ -65,8 +68,7 @@ class SegmentRESTProxyForKafka(Resource):
 
         :return: none
         """
-        print(request.data)
-        kafkaProducer.produce(request.data)
+        kafkaProducer.produce(request)
 
 
 if __name__ == '__main__':
