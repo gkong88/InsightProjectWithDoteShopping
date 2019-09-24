@@ -26,10 +26,11 @@ class SegmentKafkaProducer:
         :return:
         """
         flattenedJsonObject = flatten_json.flatten(json.loads(jsonObject))
-        topic = flattenedJsonObject[self.topicJsonKey]
+        topic = ''.join(c for c in str(flattenedJsonObject[self.topicJsonKey])if c.isalnum()) + "_00_raw_flatJSON"
+
         if self.keyJsonKey != None:
-            key = flattenedJsonObject[self.keyJsonKey]
-        self.kafkaProducer.produce(topic, json.dumps(flattenedJsonObject), str(key))
+            key = str(flattenedJsonObject[self.keyJsonKey])
+        self.kafkaProducer.produce(topic, json.dumps(flattenedJsonObject), key)
 
 #TODO: refactor this later,
 # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
@@ -50,6 +51,7 @@ class SegmentRESTProxyForKafka(Resource):
 
         :return: none
         """
+        print(request.data)
         kafkaProducer.produce(request.data)
 
 
