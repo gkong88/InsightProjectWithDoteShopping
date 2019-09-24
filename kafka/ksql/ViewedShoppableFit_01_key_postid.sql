@@ -44,7 +44,7 @@ CREATE STREAM ViewedShoppableFit_01_key_postid_fullviewonly as
 
 
 
-create table hottest_posts_15_min2 as 
+create table hottest_posts_15_min4 as 
 select event, PROPERTIES_SHOPPABLE_POST_ID, count(*)*100000000 +  PROPERTIES_SHOPPABLE_POST_ID as count_post
 from ViewedShoppableFit_01_key_postidKLUGE
 window tumbling (size 15 minute) 
@@ -54,13 +54,14 @@ group by event, PROPERTIES_SHOPPABLE_POST_ID;
 
 CREATE STREAM hottest_posts3
     (
-        event VARCHAR
+        event VARCHAR,
         count_post BIGINT
     )
-    WITH (KAFKA_TOPIC = 'hottest_posts_15_min2',
+    WITH (KAFKA_TOPIC = 'HOTTEST_POSTS_15_MIN4',
           VALUE_FORMAT = 'JSON',
-          KEY = 'timestampType'
+          KEY = 'event'
           );
 
 
-SELECT TOPK(count_post, 5) FROM hottest_posts_15_min2 group by event;
+SELECT TOPK(count_post, 5) FROM hottest_posts3 WINDOW TUMBLING (size 15 minute) group by event;
+

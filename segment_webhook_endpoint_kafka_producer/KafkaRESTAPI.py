@@ -33,7 +33,7 @@ class SegmentKafkaProducer:
 
 #TODO: refactor this later,
 # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
-kafkaBrokers = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
+kafkaBrokers = "ip-10-0-0-55.us-west-2.compute.internal:9092,ip-10-0-0-169.us-west-2.compute.internal:9092,ip-10-0-0-245.us-west-2.compute.internal:9092"
 kafkaConfig = {'bootstrap.servers': kafkaBrokers}
 kafkaProducer = SegmentKafkaProducer(kafkaConfig, "event", "properties_shoppable_post_id")
 
