@@ -1,61 +1,58 @@
 from flask import Flask, request
+from typing import Dict, Callable, Optional, List, Text
+import json
 from flask_restful import Resource, Api
-
-print("Hello World")
+import confluent_kafka
+import flatten_json
+import pdb
 
 # Initialize central registry for your app
-# this includes your functions,
-# URL rules
 app = Flask(__name__)
-# entry point for your application
 api = Api(app)
 
-todos = {"0": "0 lives here"}
+class SegmentKafkaProducer:
+    """
+    Takes segment events and creates Kafka events
+    """
+    def __init__(self, kafkaConfig: str, topicJsonKey, keyJsonKey: str = None):
+        self.topicJsonKey = topicJsonKey
+        self.keyJsonKey = keyJsonKey
+        self.kafkaProducer = confluent_kafka.Producer(**kafkaConfig)
 
-# implement the abstract class
-# of your RESTful resource.
-# restful resource is an object with a
-# type, associated data,
-# relationship to other resources
-# and methods to operate on it
-
-class TodoSimple(Resource):
-    def get(self, todo_id):
+    def sendKafkaMessge(self, jsonObject):
         """
-        returns lookup of todo_id from todos
-        :param todo_id:
+        :param topicJsonKey: string of key that should be extracted from json to set kafka event topic
+        :param keyJsonKey: string of key that should be extracted from json to set kafka event key
         :return:
         """
-        return {todo_id: todos[todo_id]}
+        flattenedJsonObject = flatten_json.flatten(json.loads(jsonObject))
+        topic = flattenedJsonObject[self.topicJsonKey]
+        if self.keyJsonKey != None:
+            key = flattenedJsonObject[self.keyJsonKey]
+        self.kafkaProducer.produce(topic, json.dumps(flattenedJsonObject), str(key))
 
-    # TODO: you probably don't need this
-    def put(self, todo_id):
-        """
+#TODO: refactor this later,
+# consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
+kafkaBrokers = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
+kafkaConfig = {'bootstrap.servers': kafkaBrokers}
+kafkaProducer = SegmentKafkaProducer(kafkaConfig)
 
-        #TODO remove this
-        The PUT method requests that the enclosed entity be stored under the supplied URI. If the URI refers to an already existing resource, it is modified; if the URI does not point to an existing resource, then the server can create the resource with that URI.[24]
+class SegmentRESTProxyForKafka(Resource):
+    """
+        REST API Sink for segment webhook that publishes data to kafka
+    """
+    def get(self):
+        return "this is an endpoint for segment"
 
-        :param topo_id:
-        :return:
-        """
-        todos[todo_id] = request.form['data']
-        return {todo_id: todos[todo_id]}
     def post(self):
-        """
+        print("RECIEVED POST REQUEST")
 
-        # TODO: remove this
-        about POST:
-        The POST method requests that the server accept the entity enclosed in the request as a new subordinate of the web resource identified by the URI. The data POSTed might be, for example, an annotation for existing resources; a message for a bulletin board, newsgroup, mailing list, or comment thread; a block of data that is the result of submitting a web form to a data-handling process; or an item to add to a database.[23]
+        kafkaProducer.produce(jsonObject)
 
-        about SEGMENT POST: A Webhook is an HTTP callback: a simple event-notification via HTTP POST. A web application implementing Webhooks will POST a message to a URL when certain things happen. The exact code required to make HTTP POST requests will depend on your application’s software language and architecture.
-        :return:
-        """
-        pass
-
-api.add_resource(HelloWorld, '/')
-# api.add_resource(TodoSimple, '/')
 
 if __name__ == '__main__':
+
+
+    api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
     app.run(debug = True)
 
-print("Goodbye World")
