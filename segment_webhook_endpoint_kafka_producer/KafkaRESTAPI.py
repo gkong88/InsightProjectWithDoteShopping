@@ -19,7 +19,7 @@ class SegmentKafkaProducer:
         self.keyJsonKey = keyJsonKey
         self.kafkaProducer = confluent_kafka.Producer(**kafkaConfig)
 
-    def sendKafkaMessge(self, jsonObject):
+    def produce(self, jsonObject):
         """
         :param topicJsonKey: string of key that should be extracted from json to set kafka event topic
         :param keyJsonKey: string of key that should be extracted from json to set kafka event key
@@ -35,7 +35,7 @@ class SegmentKafkaProducer:
 # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
 kafkaBrokers = "ec2-35-160-75-159.us-west-2.compute.amazonaws.com:9092,ec2-52-25-251-166.us-west-2.compute.amazonaws.com:9092,ec2-52-32-113-202.us-west-2.compute.amazonaws.com:9092"
 kafkaConfig = {'bootstrap.servers': kafkaBrokers}
-kafkaProducer = SegmentKafkaProducer(kafkaConfig)
+kafkaProducer = SegmentKafkaProducer(kafkaConfig, "event", "properties_shoppable_post_id")
 
 class SegmentRESTProxyForKafka(Resource):
     """
@@ -45,14 +45,15 @@ class SegmentRESTProxyForKafka(Resource):
         return "this is an endpoint for segment"
 
     def post(self):
-        print("RECIEVED POST REQUEST")
+        """
+        creates kafka event from json object
 
-        kafkaProducer.produce(jsonObject)
+        :return: none
+        """
+        kafkaProducer.produce(request.data)
 
 
 if __name__ == '__main__':
-
-
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
     app.run(debug = True)
 
