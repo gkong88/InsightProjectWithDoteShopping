@@ -1,3 +1,4 @@
+from gevent.pywsgi import WSGIServer
 from flask import Flask, request
 import json
 from flask_restful import Resource, Api
@@ -86,6 +87,7 @@ class SegmentRESTProxyForKafka(Resource):
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
-    app.run(debug = True)
-    pass
+    # app.run(debug = True)
+    http_server = WSGIServer(('', 5000), app)
+    http_server.serve_forever()
 
