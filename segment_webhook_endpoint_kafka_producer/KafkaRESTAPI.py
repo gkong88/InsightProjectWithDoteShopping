@@ -29,28 +29,18 @@ class SegmentKafkaProducer:
     Takes segment events and creates Kafka events
     """
     def __init__(self, kafka_config: str, topic_json_key, key_json_key: str = None, key_timestamp: str = None,
-                 validate: bool = True, secret_file_path: str = None):
+                 validate: bool = True):
         self.topic_json_key = topic_json_key
         self.key_json_key = key_json_key
         self.key_timestamp = key_timestamp
         self.kafka_producer = confluent_kafka.Producer(**kafka_config)
         self.validate = validate
-        if secret_file_path is not None:
-            with open(secret_file_path, 'r') as secret_file:
-                self.segment_sha1_secret = secret_file.read()
-                assert "\n" not in secret_file
-
-    def is_valid(self, signature):
-        return True
-
 
     def produce(self, request):
         """
         #TODO
         """
-        if self.validate is True:
-            if self.is_valid(request):
-                return
+        pdb.set_trace()
         flattened_json_object = flatten_json.flatten(json.loads(request.data))
         #TODO a little bit sloppy here, consider a refactor
         if flattened_json_object["event"] in ["Viewed Shoppable Fit", "Created Story"]:
@@ -91,7 +81,6 @@ class SegmentRESTProxyForKafka(Resource):
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
-    # app.run(debug = True)
     http_server = WSGIServer(('', 5000), app, log = None)
     http_server.serve_forever()
 
