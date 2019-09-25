@@ -52,6 +52,8 @@ class SegmentKafkaProducer:
             if self.is_valid(request):
                 return
         flattened_json_object = flatten_json.flatten(json.loads(request.data))
+        if flattened_json_object["event"] != "Viewed Shoppable Fit":
+            self.kafka_producer.produce("other", json.dumps(flattened_json_object))
         topic = ''.join(c for c in str(flattened_json_object["type"] + flattened_json_object[self.topic_json_key]) if c.isalnum()) + "_00_raw_flatJSON"
         key = flattened_json_object.get(self.key_json_key)
         if self.key_timestamp is not None:
@@ -88,6 +90,6 @@ class SegmentRESTProxyForKafka(Resource):
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
     # app.run(debug = True)
-    http_server = WSGIServer(('', 5000), app)
+    http_server = WSGIServer(('', 5000), app, log = None)
     http_server.serve_forever()
 

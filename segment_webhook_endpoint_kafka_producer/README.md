@@ -8,6 +8,7 @@ Ref: https://github.com/confluentinc/confluent-kafka-python
 Ref: https://github.com/segment-integrations/connect-kafka
 
 
+apt-get install libapache2-mod-wsgi
 
 pip3 install confluent-kafka
 pip3 install flask
