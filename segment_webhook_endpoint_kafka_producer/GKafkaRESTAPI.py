@@ -1,3 +1,4 @@
+from gevent.pywsgi import WSGIServer
 from flask import Flask, request
 import json
 from flask_restful import Resource, Api
@@ -55,10 +56,7 @@ class SegmentKafkaProducer:
         key = flattened_json_object.get(self.key_json_key)
         if self.key_timestamp is not None:
             timestamp = segment_timestamp_to_unix_millis(flattened_json_object.get(self.key_timestamp))
-            self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key)
-        else:
-            self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key)
-
+        self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key, timestamp)
 
 #TODO: refactor this later,
 # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
@@ -81,11 +79,15 @@ class SegmentRESTProxyForKafka(Resource):
 
         :return: none
         """
+        print("SOMEONE POSTED TO ME!")
         kafka_producer.produce(request)
+        return "I HEARD YOUR POST"
 
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
-    app.run(debug = True)
-    pass
+    #app.run(debug = True)
+    http_server = WSGIServer(('', 5000), app)
+    http_server.serve_forever()
+    
 
