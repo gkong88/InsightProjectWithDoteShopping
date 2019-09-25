@@ -52,6 +52,8 @@ class SegmentKafkaProducer:
             if self.is_valid(request):
                 return
         flattened_json_object = flatten_json.flatten(json.loads(request.data))
+        if flattened_json_object["event"] is not "Viewed Shoppable Fit":
+            return
         topic = ''.join(c for c in str(flattened_json_object["type"] + flattened_json_object[self.topic_json_key]) if c.isalnum()) + "_00_raw_flatJSON"
         key = flattened_json_object.get(self.key_json_key)
         if self.key_timestamp is not None:
