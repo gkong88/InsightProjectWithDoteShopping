@@ -52,23 +52,25 @@ class SegmentKafkaProducer:
             if self.is_valid(request):
                 return
         flattened_json_object = flatten_json.flatten(json.loads(request.data))
-        if flattened_json_object["event"] != "Viewed Shoppable Fit":
+        #TODO a little bit sloppy here, consider a refactor
+        if flattened_json_object["event"] in ["Viewed Shoppable Fit", "Created Story"]:
+            topic = ''.join(c for c in str(flattened_json_object["type"] + flattened_json_object[self.topic_json_key]) if c.isalnum()) + "_00_raw_flatJSON"
+            key = flattened_json_object.get(self.key_json_key)
+            if self.key_timestamp is not None:
+                timestamp = segment_timestamp_to_unix_millis(flattened_json_object.get(self.key_timestamp))
+                self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key, timestamp)
+            else:
+                self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key)
+        else: 
             self.kafka_producer.produce("other", json.dumps(flattened_json_object))
-        topic = ''.join(c for c in str(flattened_json_object["type"] + flattened_json_object[self.topic_json_key]) if c.isalnum()) + "_00_raw_flatJSON"
-        key = flattened_json_object.get(self.key_json_key)
-        if self.key_timestamp is not None:
-            timestamp = segment_timestamp_to_unix_millis(flattened_json_object.get(self.key_timestamp))
-            self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key)
-        else:
-            self.kafka_producer.produce(topic, json.dumps(flattened_json_object), key)
+        
 
 
 #TODO: refactor this later,
 # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
 kafka_brokers_list = "ip-10-0-0-55.us-west-2.compute.internal:9092,ip-10-0-0-169.us-west-2.compute.internal:9092,ip-10-0-0-245.us-west-2.compute.internal:9092"
 kafka_config = {'bootstrap.servers': kafka_brokers_list}
-kafka_producer = SegmentKafkaProducer(kafka_config, "event", "properties_shoppable_post_id",
-                                      validate = False, secret_file_path="segment_sha1_shared_secret")
+kafka_producer = SegmentKafkaProducer(kafka_config, "event", "properties_shoppable_post_id")
 
 
 class SegmentRESTProxyForKafka(Resource):
