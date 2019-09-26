@@ -31,6 +31,13 @@ class SegmentRESTProxyForKafka(Resource):
     def get(self):
         return "this is an endpoint for segment"
 
+    def get_key(self, json_object):
+        if str(json_object["event"]) in ["Viewed Shoppable Fit", "Created Story"]:
+            return int(json_object["properties_shoppable_post_id"])
+        else:
+            return -1
+ 
+
     def post(self):
         """
         creates kafka event from json object
@@ -42,7 +49,8 @@ class SegmentRESTProxyForKafka(Resource):
         flat_json_object = flatten_json.flatten(json.loads(request.data))
         segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
         flat_json_object["segment_timestamp"] = segment_timestamp
-        kafka_payload_data = {"records": [{"value": flat_json_object}]}
+        key = self.get_key(flat_json_object)
+        kafka_payload_data = {"records": [{"value": flat_json_object, "key": key}]}
         topic = ''.join(c for c in str(flat_json_object["type"] + flat_json_object["event"]) if
                         c.isalnum()) + "_00_raw_flatJSON"
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
