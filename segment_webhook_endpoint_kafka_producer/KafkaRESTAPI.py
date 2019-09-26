@@ -12,7 +12,17 @@ import requests
 app = Flask(__name__)
 api = Api(app)
 
-
+# Ref: https://stackoverflow.com/questions/6999726/
+# How to convert time to epoch
+epoch = datetime.datetime.utcfromtimestamp(0)
+def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
+    """
+    casts segment string timestamp to unix millis timestamp that Kafka supports
+    Required: segment_timestamp_str should be in the following format
+     "2019-09-21T20:31:07.942Z"
+    """
+    segment_timestamp_datetime = datetime.datetime.strptime(segment_timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+    return int((segment_timestamp_datetime - epoch).total_seconds() * 1000)
 
 class SegmentRESTProxyForKafka(Resource):
     """
@@ -30,17 +40,13 @@ class SegmentRESTProxyForKafka(Resource):
         #TODO: refactor this later,
         # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
         flat_json_object = flatten_json.flatten(json.loads(request.data))
+        segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
+        flat_json_object["segment_timestamp"] = segment_timestamp
+        kafka_payload_data = {"records": [{"value": flat_json_object}]}
         topic = ''.join(c for c in str(flat_json_object["type"] + flat_json_object["event"]) if
                         c.isalnum()) + "_00_raw_flatJSON"
-        kafka_payload_data = {"records": [{"value": flat_json_object}]}
-        headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json"}
-        # kafka_json_payload = json.dump({"records": [{"value": flat_json_object}]})
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
-        # destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/jsontest3"
-        # requests.request(method = "POST",
-                         # destination_url = destination_url,
-                         # headers = headers)
-        # response = requests.post(destination_url, json={"records":[{"value":{"foo":"bar"}}]}, headers=headers)
+        headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json"}
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
         return response.text
 
