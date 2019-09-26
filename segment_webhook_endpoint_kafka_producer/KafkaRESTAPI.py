@@ -56,11 +56,7 @@ class SegmentKafkaProducer:
         
 
 
-#TODO: refactor this later,
-# consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
-kafka_brokers_list = "ip-10-0-0-55.us-west-2.compute.internal:9092,ip-10-0-0-169.us-west-2.compute.internal:9092,ip-10-0-0-245.us-west-2.compute.internal:9092"
-kafka_config = {'bootstrap.servers': kafka_brokers_list}
-kafka_producer = SegmentKafkaProducer(kafka_config, "event", "properties_shoppable_post_id")
+
 
 
 class SegmentRESTProxyForKafka(Resource):
@@ -76,6 +72,11 @@ class SegmentRESTProxyForKafka(Resource):
 
         :return: none
         """
+        #TODO: refactor this later,
+        # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
+        kafka_brokers_list = "ip-10-0-0-55.us-west-2.compute.internal:9092,ip-10-0-0-169.us-west-2.compute.internal:9092,ip-10-0-0-245.us-west-2.compute.internal:9092"
+        kafka_config = {'bootstrap.servers': kafka_brokers_list}
+        kafka_producer = SegmentKafkaProducer(kafka_config, "event", "properties_shoppable_post_id")
         kafka_producer.produce(request)
 
 
