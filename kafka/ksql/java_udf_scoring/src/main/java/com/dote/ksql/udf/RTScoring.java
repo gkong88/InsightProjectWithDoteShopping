@@ -71,7 +71,7 @@ public class RTScoring {
        */
       final double sigmoid_steepness_factor = 0.5;
 
-      return 1.0 - 1.0 / (1.0 + Math.exp(-sigmoid_steepness_factor * (previews - previews_target)));
+      return 1.0 - 1.0 / (1.0 + Math.exp( (double) -sigmoid_steepness_factor * (previews - previews_target)));
   }
 
   /**
@@ -88,7 +88,7 @@ public class RTScoring {
       final double click_thru_rate = 1.0 * previews / (previews + views);
       final double sigmoid_steepness_factor = 20.0;
 
-      return 1.0 / (1.0 + Math.exp(-sigmoid_steepness_factor * (click_thru_rate - AVERAGE_CLICK_THRU_RATE)));
+      return 1.0 / (1.0 + Math.exp( (double) -sigmoid_steepness_factor * (click_thru_rate - AVERAGE_CLICK_THRU_RATE)));
 }
 
 // TODO: Clean this up if you end up not using this.
