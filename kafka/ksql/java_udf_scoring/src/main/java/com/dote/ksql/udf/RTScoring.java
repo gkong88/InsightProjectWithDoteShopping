@@ -71,7 +71,7 @@ public class RTScoring {
        */
       final double sigmoid_steepness_factor = 0.5;
 
-      return 1.0 / (1.0 + Math.exp(-sigmoid_steepness_factor * (previews - previews_target)));
+      return 1.0 - 1.0 / (1.0 + Math.exp(-sigmoid_steepness_factor * (previews - previews_target)));
   }
 
   /**
