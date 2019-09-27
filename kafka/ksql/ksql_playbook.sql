@@ -9,6 +9,7 @@ CREATE STREAM CREATE_POST
           TIMESTAMP ='segment_timestamp'
           );
 
+
 CREATE STREAM CLICK
     (
         properties_shoppable_post_id BIGINT,
