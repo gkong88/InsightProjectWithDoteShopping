@@ -85,6 +85,7 @@ public class RTScoring {
       /**
        * sigmoid visualization: https://www.wolframalpha.com/input/?i=1%2F%281%2Be%5E%28-20*+%28x+-+0.11%29%29%29+from+0+to+1
        */
+      if (views + previews == 0) {return 0.0;}
       final double click_thru_rate = 1.0 * views / (previews + views);
       final double sigmoid_steepness_factor = 20.0;
 
