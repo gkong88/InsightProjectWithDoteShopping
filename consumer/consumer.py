@@ -3,8 +3,9 @@
 import json
 from flask_restful import Resource, Api
 from confluent_kafka import Consumer, KafkaException
-# import pdb
-import datetime
+import sys
+import pdb
+# import datetime
 
 class Payload:
     """
@@ -29,7 +30,6 @@ config = {'bootstrap.servers': "ec2-100-20-75-14.us-west-2.compute.amazonaws.com
            'auto.offset.reset': 'earliest'}
 consumer = Consumer(config)
 consumer.subscribe(topics = ['trackViewedShoppableFit_00_raw_flatJSON'])
-consumer.consume()
 try:
     while True:
         msg = consumer.poll(timeout = 1.0)
