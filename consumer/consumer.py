@@ -3,6 +3,7 @@ import smart_open
 import json
 import time
 import datetime
+import random
 
 """
 This program periodically event sources a Kafka Topic 
@@ -32,7 +33,7 @@ def get_scores(consumer: KafkaConsumer, time_window_size: datetime.timedelta) ->
     time_window_start = datetime.datetime.now() - time_window_size
     time_window_start_epoch = int(time_window_start.timestamp() * 1000)
     consumer_seek_to_window_start(consumer, time_window_start)
-    end_offset = consumer_get_latest_offset(consumer)
+    end_offset = consumer_get_latest_offset(consumer) - 1
 
     scores = {}
     counter = 0
@@ -57,12 +58,12 @@ def push_to_s3(scores) -> datetime.datetime:
     # Assumes credentials are ASSUMED to be located in:
     #   ~/.aws/credentials
     push_timestamp = datetime.datetime.now()
-    push_timestamp_str = push_timestamp.strftime('%Y%m%d%H%M%S')
+    push_timestamp_str = str(push_timestamp.strftime('%Y%m%d%H%M%S'))
 
     print("Pushing data to S3 at: %s" % push_timestamp_str)
-    with smart_open.open('s3://dote-fit-scores/calculated_score_2/rtscore_' + push_timestamp_str + '.csv',
-                         'wb') as fout:
-        fout.write('shoppable_post_id,score\n').encode('utf-8')
+    s3_filename = 's3://dote-fit-scores/calculated_score_2/rtscore_' + push_timestamp_str + '.csv'
+    with smart_open.open(s3_filename , 'wb') as fout:
+        fout.write(b'shoppable_post_id,score\n')
         for post, score in scores.items():
             fout.write((str(post) + ',' + str(int(score))+'\n').encode('utf-8'))
     print("Push successful!")
@@ -112,7 +113,7 @@ def main():
         consumer = KafkaConsumer(topic_name,
                                  bootstrap_servers=servers,
                                  auto_offset_reset='earliest',
-                                 enable_auto_commit=True, group_id='my-group',
+                                 enable_auto_commit=True, group_id='my-group' + str(random.randint(0,1000000)),
                                  value_deserializer=lambda x: json.loads(x.decode('utf-8')))
 
         # poll kafka topic until consumer partition is automatically generated
