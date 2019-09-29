@@ -41,10 +41,10 @@ def get_scores(consumer: KafkaConsumer, time_window_size: datetime.timedelta) ->
             scores[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value['RT_SCORE']
             counter += 1
             if counter % 1000 == 0:
-                print("message processing counter: %s, offset: %s" %(counter, m.offset))
+                print("message processing counter: %s, offset: %s" % (counter, m.offset))
         if m.offset >= end_offset:
             break
-    return scores;
+    return scores
 
 
 def push_to_s3(scores) -> datetime.datetime:
@@ -60,8 +60,9 @@ def push_to_s3(scores) -> datetime.datetime:
     push_timestamp_str = push_timestamp.strftime('%Y%m%d%H%M%S')
 
     print("Pushing data to S3 at: %s" % push_timestamp_str)
-    with smart_open.open('s3://dote-fit-scores/calculated_score_2/rtscore_' + push_timestamp_str + '.csv', 'wb') as fout:
-        fout.write(('shoppable_post_id,score\n').encode('utf-8'))
+    with smart_open.open('s3://dote-fit-scores/calculated_score_2/rtscore_' + push_timestamp_str + '.csv',
+                         'wb') as fout:
+        fout.write('shoppable_post_id,score\n').encode('utf-8')
         for post, score in scores.items():
             fout.write((str(post) + ',' + str(int(score))+'\n').encode('utf-8'))
     print("Push successful!")
@@ -99,17 +100,20 @@ def consumer_get_latest_offset(consumer: KafkaConsumer) -> int:
     return end_offset
 
 
-if __name__ == "__main__":
+def main():
     # config variables
     # TODO: refactor to take these in commandline
     time_window_size = datetime.timedelta(days=3)
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
     servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
     push_interval = datetime.timedelta(minutes=2)
-
     while True:
         # connect to Kafka Topic.
-        consumer = KafkaConsumer(topic_name, bootstrap_servers=servers, auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+        consumer = KafkaConsumer(topic_name,
+                                 bootstrap_servers=servers,
+                                 auto_offset_reset='earliest',
+                                 enable_auto_commit=True, group_id='my-group',
+                                 value_deserializer=lambda x: json.loads(x.decode('utf-8')))
 
         # poll kafka topic until consumer partition is automatically generated
         message = consumer.poll(1, 1)
@@ -123,7 +127,10 @@ if __name__ == "__main__":
 
         # wait until the next push interval.
         next_push_timestamp = last_push_timestamp + push_interval
-        while (datetime.datetime.now() < next_push_timestamp):
-            print("sleeping until %s"%next_push_timestamp)
+        while datetime.datetime.now() < next_push_timestamp:
+            print("sleeping until %s" % next_push_timestamp)
             time.sleep((datetime.datetime.now() - (last_push_timestamp + push_interval)).seconds)
 
+
+if __name__ == "__main__":
+    main()
