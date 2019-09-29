@@ -8,7 +8,7 @@ import datetime
 import pdb
 
 def push_to_s3(msgs):
-    csvfile = open('test.txt')
+    csvfile = open('test.txt', 'w')
     scores = {}
     counter = 0
     for m in msgs:
