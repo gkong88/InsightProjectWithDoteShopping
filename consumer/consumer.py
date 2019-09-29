@@ -1,6 +1,6 @@
-import json
 from kafka import KafkaConsumer
 import smart_open
+import json
 import time
 import datetime
 
