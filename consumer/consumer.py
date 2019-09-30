@@ -3,6 +3,7 @@ import smart_open
 import json
 import time
 import datetime
+from pytz import timezone
 import random
 
 """
@@ -58,16 +59,15 @@ def push_to_s3(scores) -> datetime.datetime:
     # Assumes credentials are ASSUMED to be located in:
     #   ~/.aws/credentials
     push_timestamp = datetime.datetime.now()
-    push_timestamp_str = str(push_timestamp.strftime('%Y%m%d%H%M%S'))
+    push_timestamp_pst_strf = push_timestamp.astimezone(timezone('US/Pacific')).strftime('%Y%m%d%H%M%S')
 
-    print("Pushing data to S3 at: %s" % push_timestamp_str)
-    s3_filename = 's3://dote-fit-scores/calculated_score_2/rtscore_' + push_timestamp_str + '.csv'
+    print("Pushing data to S3 at: %s" % push_timestamp_pst_strf)
+    s3_filename = 's3://dote-fit-scores/calculated_score_2/rtscore_' + push_timestamp_pst_strf + '.csv'
     with smart_open.open(s3_filename , 'wb') as fout:
         fout.write(b'shoppable_post_id,score\n')
         for post, score in scores.items():
             fout.write((str(post) + ',' + str(int(score))+'\n').encode('utf-8'))
     print("Push successful!")
-
     return push_timestamp
 
 
@@ -126,11 +126,13 @@ def main():
         last_push_timestamp = push_to_s3(scores)
         consumer.close()
 
-        # wait until the next push interval.
+        # wait until the next push interval
         next_push_timestamp = last_push_timestamp + push_interval
         while datetime.datetime.now() < next_push_timestamp:
+            sleep_duration = max((next_push_timestamp - datetime.datetime.now()).seconds, 1)
             print("sleeping until %s" % next_push_timestamp)
-            time.sleep((datetime.datetime.now() - (last_push_timestamp + push_interval)).seconds)
+            print("sleeping for %s seconds" % sleep_duration)
+            time.sleep(sleep_duration)
 
 
 if __name__ == "__main__":
