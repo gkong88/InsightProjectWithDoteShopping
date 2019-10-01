@@ -10,9 +10,14 @@ import datetime
 import requests
 
 # Initialize central registry for your app
-app = Flask(__name__)
-api = Api(app)
+application = Flask(__name__)
+api = Api(application)
 
+
+@application.route("/")
+def hello():
+    print("got the request")
+    return "<h1 style='color:blue'>Hello There!</h1>" 
 
 def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
     """
@@ -56,13 +61,17 @@ class SegmentRESTProxyForKafka(Resource):
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
         headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json", "Connection":'close'}
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
+        print("serving request")
         #TODO: requests arent closing properly.
         # increase open file limit / connections or garbage collect unused sessions
         return response.text
 
+api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka') 
+
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
-    http_server = WSGIServer(('', 5000), app, log = None)
-    http_server.serve_forever()
+    application.run(host='0.0.0.0', port = 5001)
+    #http_server = WSGIServer(('', 5000), application, log = None)
+    #http_server.serve_forever()
 
