@@ -1,10 +1,10 @@
 from builtins import range, min, len
 
+import threading
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
-<<<<<<< HEAD
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output
 from kafka import KafkaConsumer
@@ -302,6 +302,7 @@ def consumer_seek_to_window_start(consumer: KafkaConsumer, time_window_start: da
     if len(consumer.assignment()) == 0:
         # poll consumer to generate a topic partition assignment
         for m in consumer:
+            pdb.set_tr
             print("got a message")
         message = consumer.poll(1, 1)
         while len(message) == 0:
@@ -341,7 +342,7 @@ def main():
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
     servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
     # push_interval = datetime.timedelta(minutes=2)
-
+    pdb.set_trace()
     # connect to Kafka Topic.
     consumer = KafkaConsumer(topic_name,
                              bootstrap_servers=servers,
@@ -378,9 +379,6 @@ def main():
         #     print("sleeping for %s seconds" % sleep_duration)
         #     time.sleep(sleep_duration)
 
-
-=======
->>>>>>> 6644506fb53f8aa58942b0e2b7866fd5af1d3bfe
 
 df = pd.read_csv(
     'https://gist.githubusercontent.com/chriddyp/'
@@ -424,4 +422,5 @@ app.layout = html.Div(children = [
 ])
 
 if __name__ == '__main__':
+    main()
     app.run_server(debug = True)
