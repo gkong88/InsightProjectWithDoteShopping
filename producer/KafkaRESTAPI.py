@@ -13,15 +13,14 @@ import requests
 app = Flask(__name__)
 api = Api(app)
 
-# Ref: https://stackoverflow.com/questions/6999726/
-# How to convert time to epoch
-epoch = datetime.datetime.utcfromtimestamp(0)
+
 def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
     """
     casts segment string timestamp to unix millis timestamp that Kafka supports
     Required: segment_timestamp_str should be in the following format
      "2019-09-21T20:31:07.942Z"
     """
+    epoch = datetime.datetime.utcfromtimestamp(0)
     segment_timestamp_datetime = datetime.datetime.strptime(segment_timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
     return int((segment_timestamp_datetime - epoch).total_seconds() * 1000)
 
@@ -33,7 +32,7 @@ class SegmentRESTProxyForKafka(Resource):
         return "this is an endpoint for segment"
 
     def get_key(self, json_object):
-        if str(json_object["event"]) in ["Viewed Shoppable Fit", "Created Story"]:
+        if str(json_object.get("event")) in ["Viewed Shoppable Fit", "Created Story"]:
             return int(json_object["properties_shoppable_post_id"])
         else:
             return -1
@@ -52,11 +51,13 @@ class SegmentRESTProxyForKafka(Resource):
         flat_json_object["segment_timestamp"] = segment_timestamp
         key = self.get_key(flat_json_object)
         kafka_payload_data = {"records": [{"value": flat_json_object, "key": key}]}
-        topic = ''.join(c for c in str(flat_json_object["type"] + flat_json_object["event"]) if
+        topic = ''.join(c for c in str(flat_json_object.get("type") + flat_json_object.get("event")) if
                         c.isalnum()) + "_00_raw_flatJSON"
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
-        headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json"}
+        headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json", "Connection":'close'}
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
+        #TODO: requests arent closing properly.
+        # increase open file limit / connections or garbage collect unused sessions
         return response.text
 
 
