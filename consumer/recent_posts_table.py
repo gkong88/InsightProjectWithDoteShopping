@@ -3,6 +3,7 @@ from kafka import KafkaConsumer
 from scoring_function_creator import ScoringFunctionCreator
 import datetime
 
+
 class RecentPostsTable:
     def __init__(self, consumer: KafkaConsumer,
                  scoring_function=ScoringFunctionCreator(),
