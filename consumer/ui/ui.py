@@ -1,5 +1,6 @@
 from builtins import range, min, len
 
+import math
 import threading
 import dash
 import dash_core_components as dcc
@@ -239,99 +240,112 @@ import pdb
 # def update_output_div(input_value):
 #     return 'You\'ve entered "{}"'.format(input_value)
 
-def get_time_window_start(time_window_size: datetime.datetime) -> int:
-    """
-    Returns start of time window from now - time_window_size.
 
-    :param time_window_size:
-    :return: unix epoch time
-    """
-    time_window_start = datetime.datetime.now() - time_window_size
-    time_window_start_epoch = int(time_window_start.timestamp() * 1000)
-    return time_window_start_epoch
+class ScoringFunctionCreator:
+    def __init__(self, max_coldness_score=50, min_previews_threshold=30, cold_threshold_steepness=0.5,
+                 max_hotness_score=50, ctr_hotness_threshold=0.12, hot_threshold_steepness=20):
+        self.max_coldness_score = max_coldness_score
+        self.min_previews_threshold = min_previews_threshold
+        self.cold_threshold_steepness = cold_threshold_steepness
+        self.max_hotness_score = max_hotness_score
+        self.ctr_hotness_threshold = ctr_hotness_threshold
+        self.hot_threshold_steepness = hot_threshold_steepness
 
+    def score(self, previews, full_views):
+        return self.hotness_score(previews, full_views) + self.coldness_score(previews, full_views)
 
-def consumer_get_latest_offset(consumer: KafkaConsumer) -> int:
-    """
-    Returns latest offset in topic of kafka consumer
+    def hotness_score(self, previews, full_views):
+        if previews + full_views == 0:
+            return 0
+        # max fn guards against edge case of out of ordering of preview and view event delivery
+        click_thru_rate = full_views / max(previews, full_views)
+        hotness_weight = 1.0 / (1.0 + math.exp(-self.hot_threshold_steepness * (click_thru_rate - self.ctr_hotness_threshold)))
+        return hotness_weight * self.max_hotness_score
 
-    :param consumer: kafka consumer
-    :return: kafka topic offset of last event within the time window of analysis
-    """
-    topic_partition = consumer.assignment().pop()
-    end_offset = consumer.end_offsets([topic_partition])[topic_partition]
-    return end_offset
-
-
-def bootstrap_posts(posts: dict, consumer: KafkaConsumer, time_window_size: datetime.timedelta) -> dict:
-    """
-    Reads kafka topic as an event source to reconstitute a "snapshot" of
-    scores for all posts by replaying them into a dictionary.
-
-    Stores results in a dictionary where
-        key: post_id
-        value: dict of json
-
-    :param consumer: kafka consumer that subscribes to relevant topic.
-        REQUIRED to have exactly one partition
-    :param time_window_size: post creation time window to include in analysis, relative to current time
-    """
-    time_window_start = datetime.datetime.now() - time_window_size
-    time_window_start_epoch = int(time_window_start.timestamp() * 1000)
-    consumer_seek_to_window_start(consumer, time_window_start)
-    end_offset = consumer_get_latest_offset(consumer) - 1
-
-    messages = {}
-    for m in consumer:
-        if m is not None and m.value['POST_TIMESTAMP'] > time_window_start_epoch:
-            messages[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
-        if m.offset >= end_offset:
-            break
-    return messages
+    def coldness_score(self, previews):
+        coldness_weight = 1 - 1 / (1 + math.exp( -self.cold_threshold_steepness * (previews - self.min_previews_threshold)))
+        return coldness_weight * self.max_coldness_score
 
 
-def consumer_seek_to_window_start(consumer: KafkaConsumer, time_window_start: datetime.datetime):
-    """
-    This function mutates the consumer to "seek" the kafka topic offset to that of the earliest event that
-    is inside the time_window.
+class RecentPostsTable:
+    def __init__(self, consumer: KafkaConsumer,
+                 scoring_function = ScoringFunctionCreator(),
+                 time_window_size = datetime.timedelta(days=3)):
+        self.c = consumer
+        self.scoring_function = scoring_function
+        self.time_window_size = time_window_size
+        self.time_window_start = None
+        self.time_window_start_epoch = None
+        self.topic_partition = None
+        self.seek_to_window_start() #initializes time_window_start, time_window_start_epoch, and topic_partition
+        self.posts = {}
+        self.bulk_consume_events()
 
-    :param consumer:
-    :param time_window_start: time window of analysis. i.e. how old of posts we should consider
-    :effects: seek to first event in time window
-    """
-    if len(consumer.assignment()) == 0:
-        # poll consumer to generate a topic partition assignment
-        message = consumer.poll(1, 1)
-        while len(message) == 0:
-            message = consumer.poll(1, 1)
+    def snapshot(self) -> pd.DataFrame:
+        """
 
-    topic_partition = consumer.assignment().pop()
-    time_window_start_epoch = int(time_window_start.timestamp()*1000)
+        :return:
+        """
+        self.garbage_collect_old()
+        self.bulk_consume_events()
+        self.apply_score()
+        return pd.DataFrame.from_dict(self.scores, orient='index')
 
-    # get first offset that is in the time window
-    start_offset = consumer.offsets_for_times({topic_partition: time_window_start_epoch})[topic_partition].offset
-    # set the consumer to consume from this offset
-    consumer.seek(topic_partition, start_offset)
+    def apply_score(self):
+        for key, json_dict in self.posts.items():
+            json_dict['score'] = self.scoring_function.score(json_dict['PREVIEWS'], json_dict['FULL_VIEWS'])
+            json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEWS'])
+            json_dict['hotness_score'] = self.scoring_function.hotness_score()
 
+    def bulk_consume_events(self):
+        """
+        Reads kafka topic as an event source to reconstitute a "snapshot" of
+        scores for all posts by replaying them into a dictionary.
 
-def remove_old_posts(posts, time_window_start):
-    """
-    garbage collector for posts that have aged out
+        """
+        end_offset = self.consumer_get_latest_offset(self.consumer) - 1
+        for m in self.consumer:
+            if m is not None and m.value['POST_TIMESTAMP'] > self.time_window_start_epoch:
+                self.posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
+            if m.offset >= end_offset:
+                break
 
-    :param posts:
-    :param time_window_start:
-    :return:
-    """
-    for post_id in list(posts.keys()):
-        if posts[post_id]['POST_TIMESTAMP'] < time_window_start:
-            posts.pop(post_id)
+    def garbage_collect_old(self):
+        """
+        Removes all tracked posts
+        :return:
+        """
+        #TODO: Refactor with a secondary index, ordered by creation timestamp.
+        for post_id in list(self.posts.keys()):
+            if self.posts[post_id]['POST_TIMESTAMP'] < self.time_window_start_epoch:
+                self.posts.pop(post_id)
 
+    def seek_to_window_start(self):
+        """
+        This function mutates the consumer to "seek" the kafka topic offset to that of the earliest event that
+        is inside the time_window.
+        """
+        self.update_time_window_start()
+        if len(self.consumer.assignment()) == 0:
+            # poll consumer to generate a topic partition assignment
+            message = self.consumer.poll(1, 1)
+            while len(message) == 0:
+                message = self.consumer.poll(1, 1)
+        self.topic_partition = self.consumer.assignment().pop()
+        time_window_start_epoch = int(self.time_window_start.timestamp()*1000)
 
+        # get first offset that is in the time window
+        start_offset = self.consumer.offsets_for_times({self.topic_partition: time_window_start_epoch})[self.topic_partition].offset
+        # set the consumer to consume from this offset
+        self.consumer.seek(self.topic_partition, start_offset)
 
-posts = {}
-score_lock = threading.Lock
-time_window_size = datetime.timedelta(days=3)
-time_window_start_epoch = get_time_window_start(time_window_size)
+    def update_time_window_start(self):
+        """
+        Returns start of time window from now - self.time_window_size.
+
+        """
+        self.time_window_start = datetime.datetime.now() - self.time_window_size
+        self.time_window_start_epoch = int(self.time_window_start.timestamp() * 1000)
 
 def main():
     # config variables
@@ -346,20 +360,10 @@ def main():
                              enable_auto_commit=True,
                              group_id='my-group',
                              value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+    scoring_function = ScoringFunctionCreator()
+    posts = RecentPostsTable(consumer, scoring_function)
+    df = posts.snapshot()
 
-    # get scores via event sourcing
-    bootstrap_posts(posts, consumer, time_window_size)
-
-    # counter to trigger garbage collection
-    counter = 0
-    for m in consumer:
-        if m is not None and m.value['POST_TIMESTAMP'] > time_window_start_epoch:
-            posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
-            counter += 1
-            if counter % 1000 == 0:
-                counter = 1
-                time_window_start = get_time_window_start(time_window_size)
-                remove_old_posts(posts, time_window_start)
 
 
 
@@ -380,6 +384,8 @@ df = pd.read_csv(
     'c78bf172206ce24f77d6363a2d754b59/raw/'
     'c353e8ef842413cae56ae3920b8fd78468aa4cb2/'
     'usa-agricultural-exports-2011.csv')
+
+
 
 def generate_table(dataframe, max_rows=10):
     return html.Table(
