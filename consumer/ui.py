@@ -89,7 +89,7 @@ app.layout = html.Div([
         #     value=10
         # )
         dash_table.DataTable(
-            id='table',
+            id='my-table',
             columns=[{"name": i, "id": i} for i in backup_df.columns],
             data=backup_df.to_dict('records')
         ),
@@ -111,7 +111,9 @@ app.layout = html.Div([
 
 
 # Multiple components can update everytime interval gets fired.
-@app.callback(Output('my-graph', 'figure'),
+@app.callback([Output('my-graph', 'figure'),
+               Output('my-table', 'columns'),
+               Output('my-table', 'data')],
               [Input('interval-component', 'n_intervals')])
 def update_graph_live(n):
     df = backup_df
@@ -135,7 +137,7 @@ def update_graph_live(n):
                 # x = df['PROPERTIES_SHOPPABLE_POST_ID'],
                 y=df['hotness_score'],
                 # colors=colors['hot']
-                width=0.05,
+                width=0.1,
             )
         ],
         layout=go.Layout(
@@ -145,10 +147,9 @@ def update_graph_live(n):
             yaxis=dict(title='Score')
         )
     )
-    return figure
-
-
-
+    columns = [{"name": i, "id": i} for i in df.columns],
+    data = df.to_dict('records')
+    return figure, columns, data
 
 
 def generate_table(dataframe, max_rows=10):
