@@ -307,7 +307,7 @@ class RecentPostsTable:
         scores for all posts by replaying them into a dictionary.
 
         """
-        end_offset = self.consumer.end_offsets(self.topic_partition) - 1
+        end_offset = self.consumer.end_offsets([self.topic_partition])[self.topic_partition] - 1
         for m in self.consumer:
             if m is not None and m.value['POST_TIMESTAMP'] > self.time_window_start_epoch:
                 self.posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
