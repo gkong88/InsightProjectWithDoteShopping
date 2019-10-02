@@ -31,7 +31,17 @@ def load_posts():
     scoring_function = ScoringFunctionCreator()
     return RecentPostsTable(consumer, scoring_function)
 
-df = load_posts()
+posts = load_posts()
+
+def update_posts(posts) -> pd.DataFrame:
+    return posts.get_snapshot()
+
+
+backup_df = pd.read_pickle('sample_data')
+backup_df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in backup_df.POST_TIMESTAMP]
+max_ts = max(backup_df.POST_TIMESTAMP)
+backup_df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in backup_df.POST_TIMESTAMP]
+
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -39,7 +49,9 @@ app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
 
 colors = {
     'background': '#111111',
-    'text': '#7FDBFF'
+    'text': '#7FDBFF',
+    'cold': '#00ffff',
+    'hot:': '#ff3300'
 }
 
 app.layout = html.Div([
@@ -50,10 +62,8 @@ app.layout = html.Div([
             'colors': colors['text']
         }
     ),
-    dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in df.columns],
-        data=df.to_dict('records')
+    dcc.Graph(
+        id = 'my-graph'
     ),
     html.Div(
         [
@@ -72,203 +82,70 @@ app.layout = html.Div([
             marks={i: 'Label {}'.format(i) if i == 1 else str(i) for i in range(0, 110, 10)},
             value=50
         ),
-        daq.GraduatedBar(
-            id='hot-cold-bar',
-            color={"ranges":{"blue":[0,4],"red":[7,10]}},
-            showCurrentValue=True,
-            value=10
+        # daq.GraduatedBar(
+        #     id='hot-cold-bar',
+        #     color={"ranges":{"blue":[0,4],"red":[7,10]}},
+        #     showCurrentValue=True,
+        #     value=10
+        # )
+        dash_table.DataTable(
+            id='table',
+            columns=[{"name": i, "id": i} for i in backup_df.columns],
+            data=backup_df.to_dict('records')
+        ),
+        dcc.Interval(
+            id='interval-component',
+            interval=3 * 1000,  # in milliseconds
+            n_intervals=0
         )
         ]
     )
 ])
 
-@app.callback(
-    Output("hot-cold-bar", "value"),
-    [Input("hot-cold-slider", "value")],
-)
-def update_output(cold_value):
-    return cold_value
-
-
-
-
-
-#     dcc.Interval(
-#         id='interval-component',
-#         interval=1 * 1000,  # in milliseconds
-#         n_intervals=0
-#     ),
-#     html.Div([
-#         dcc.Graph(id='graph-with-slider'),
-#         dcc.Slider(
-#             id='year-slider',
-#             min=df['year'].min(),
-#             max=df['year'].max(),
-#             value=df['year'].min(),
-#             marks={str(year): str(year) for year in df['year'].unique()},
-#             step=None
-#         )
-#     ]),
-#     html.Div([
-#         dcc.Input(id='my-id', value='initial value', type='text'),
-#         html.Div(id='my-div')
-#     ]),
-#     html.H1(children='MillionArmBandit'),
-#     html.Div(children='''
-#         Faster content ranking optimization for better user feeds
-#     '''),
-#     dcc.Graph(
-#         id = 'example-graph',
-#         figure = {
-#             'data': [
-#                 {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
-#                 {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': 'Montreal'}
-#             ],
-#             'layout': {
-#                 'title': 'Dash Data Visualization'
-#             }
-#         }
-#     ),
-#     html.H4(children = 'US Agriculture Exports (2011)'),
-#     generate_table(df_for_agriculture_table),
-#     html.H4(children = 'Life Expectancy vs GDP Graph'),
-#     html.Div([
-#         dcc.Graph(
-#             id='life-exp-vs-gdp',
-#             figure={
-#                 'data': [
-#                     go.Scatter(
-#                         x=df_for_gdp_graph[df_for_gdp_graph['continent'] == i]['gdp per capita'],
-#                         y=df_for_gdp_graph[df_for_gdp_graph['continent'] == i]['life expectancy'],
-#                         text=df_for_gdp_graph[df_for_gdp_graph['continent'] == i]['country'],
-#                         mode='markers',
-#                         opacity=0.7,
-#                         marker={
-#                             'si`ze': 15,
-#                             'line': {'width': 0.5, 'color': 'white'}
-#                         },
-#                         name=i
-#                     ) for i in df_for_gdp_graph.continent.unique()
-#                 ],
-#                 'layout': go.Layout(
-#                     xaxis={'type': 'log', 'title': 'GDP Per Capita'},
-#                     yaxis={'title': 'Life Expectancy'},
-#                     margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-#                     legend={'x': 0, 'y': 1},
-#                     hovermode='closest'
-#                 )
-#             }
-#         )
-#     ]),
-#     html.Div([
-#         dcc.Markdown(children = markdown_text)
-#     ]),
-#     html.Label('Dropdown'),
-#     dcc.Dropdown(
-#         options=[
-#             {'label': 'New York City', 'value': 'NYC'},
-#             {'label': u'Montréal', 'value': 'MTL'},
-#             {'label': 'San Francisco', 'value': 'SF'}
-#         ],
-#         value='MTL'
-#     ),
-#
-#     html.Label('Multi-Select Dropdown'),
-#     dcc.Dropdown(
-#         options=[
-#             {'label': 'New York City', 'value': 'NYC'},
-#             {'label': u'Montréal', 'value': 'MTL'},
-#             {'label': 'San Francisco', 'value': 'SF'}
-#         ],
-#         value=['MTL', 'SF'],
-#         multi=True
-#     ),
-#
-#     html.Label('Radio Items'),
-#     dcc.RadioItems(
-#         options=[
-#             {'label': 'New York City', 'value': 'NYC'},
-#             {'label': u'Montréal', 'value': 'MTL'},
-#             {'label': 'San Francisco', 'value': 'SF'}
-#         ],
-#         value='MTL'
-#     ),
-#
-#     html.Label('Checkboxes'),
-#     dcc.Checklist(
-#         options=[
-#             {'label': 'New York City', 'value': 'NYC'},
-#             {'label': u'Montréal', 'value': 'MTL'},
-#             {'label': 'San Francisco', 'value': 'SF'}
-#         ],
-#         value=['MTL', 'SF']
-#     ),
-#
-#     html.Label('Text Input'),
-#     dcc.Input(value='MTL', type='text'),
-#
-#     html.Label('Slider'),
-#     dcc.Slider(
-#         min=0,
-#         max=9,
-#         marks={i: 'Label {}'.format(i) if i == 1 else str(i) for i in range(1, 6)},
-#         value=5,
-#     )
-# ])
-#
-# @app.callback(Output('live-update-text', 'children'),
-#               [Input('interval-component', 'n_intervals')])
-# def update_metrics(n):
-#     pass
-#
 # @app.callback(
-#     Output('hover-data', 'children'),
-#     [Input('basic-interactions', 'hoverData')])
-# def display_hover_data(hoverData):
-#     return json.dumps(hoverData, indent=2)
-#
-#
-# @app.callback(
-#     Output('click-data', 'children'),
-#     [Input('basic-interactions', 'clickData')])
-# def display_click_data(clickData):
-#     return json.dumps(clickData, indent=2)
-#
-#
-# @app.callback(
-#     Output('graph-with-slider', 'figure'),
-#     [Input('year-slider', 'value')])
-# def update_figure(selected_year):
-#     filtered_df = df[df.year == selected_year]
-#     traces = []
-#     for i in filtered_df.continent.unique():
-#         df_by_continent = filtered_df[filtered_df['continent'] == i]
-#         traces.append(go.Scatter(
-#             x = df_by_continent['gdpPercap'],
-#             y = df_by_continent['lifeExp'],
-#             text = df_by_continent['country'],
-#             mode = 'markers',
-#             opacity = 0.7,
-#             marker = {
-#                 'size': 15,
-#                 'line': {'width': 0.5, 'color': 'white'}
-#             },
-#             name = i
-#         ))
-#     return {
-#         'data': traces,
-#         'layout': go.Layout(
-#             xaxis={'type': 'log', 'title': 'GDP Per Capita'},
-#             yaxis={'title': 'Life Expectancy', 'range': [20, 90]},
-#             margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-#             legend={'x': 0, 'y': 1},
-#             hovermode='closest'
-#         )
-#     }
+#     Output("hot-cold-bar", "value"),
+#     [Input("hot-cold-slider", "value")],
+# )
+# def update_output(cold_value):
+#     return cold_value
 
 
-def generate_graph(posts: RecentPostsTable) -> dcc.Graph:
-    pass
+# Multiple components can update everytime interval gets fired.
+@app.callback(Output('my-graph', 'figure'),
+              [Input('interval-component', 'n_intervals')])
+def update_graph_live(n):
+    df = posts.get_snapshot()
+    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
+    max_ts = max(df.POST_TIMESTAMP)
+    df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
+    figure = go.Figure(
+        id='my-figure',
+        data=[
+            go.Bar(
+                name='cold score',
+                x=df['tsnorm'],
+                # x = df['PROPERTIES_SHOPPABLE_POST_ID'],
+                y=df['coldness_score'],
+                width=0.1,
+                # colors=colors['cold']
+            ),
+            go.Bar(
+                name='hot score',
+                x=df['tsnorm'],
+                # x = df['PROPERTIES_SHOPPABLE_POST_ID'],
+                y=df['hotness_score'],
+                # colors=colors['hot']
+                width=0.05,
+            )
+        ],
+        layout=go.Layout(
+            title='Post Scores in Past Three Days',
+            barmode='stack',
+            xaxis=dict(title='Hours Ago'),
+            yaxis=dict(title='Score')
+        )
+    )
+    return figure
 
 
 
