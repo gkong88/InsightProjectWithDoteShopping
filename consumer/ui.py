@@ -147,7 +147,7 @@ def update_graph_live(n):
             yaxis=dict(title='Score')
         )
     )
-    columns = [{"name": i, "id": i} for i in df.columns],
+    columns = [{"name": i, "id": i} for i in df.columns]
     data = df.to_dict('records')
     return figure, columns, data
 
