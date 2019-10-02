@@ -1,6 +1,6 @@
 import pandas as pd
 from kafka import KafkaConsumer
-from .scoring_function_creator import ScoringFunctionCreator
+from scoring_function_creator import ScoringFunctionCreator
 import datetime
 
 class RecentPostsTable:

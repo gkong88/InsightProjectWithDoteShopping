@@ -7,8 +7,8 @@ from dash.dependencies import Input, Output
 from kafka import KafkaConsumer
 import smart_open
 import json
-from .scoring_function_creator import ScoringFunctionCreator
-from .recent_posts_table import RecentPostsTable
+from scoring_function_creator import ScoringFunctionCreator
+from recent_posts_table import RecentPostsTable
 import time
 import datetime
 from pytz import timezone
