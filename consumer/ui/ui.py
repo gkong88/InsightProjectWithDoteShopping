@@ -269,9 +269,9 @@ class ScoringFunctionCreator:
 
 class RecentPostsTable:
     def __init__(self, consumer: KafkaConsumer,
-                 scoring_function = ScoringFunctionCreator(),
-                 time_window_size = datetime.timedelta(days=3)):
-        self.c = consumer
+                 scoring_function=ScoringFunctionCreator(),
+                 time_window_size=datetime.timedelta(days=3)):
+        self.consumer = consumer
         self.scoring_function = scoring_function
         self.time_window_size = time_window_size
         self.time_window_start = None
