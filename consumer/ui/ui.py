@@ -289,7 +289,7 @@ class RecentPostsTable:
         self.__garbage_collect_old()
         self.__bulk_consume_events()
         self.__apply_score()
-        return pd.DataFrame.from_dict(self.scores, orient='index')
+        return pd.DataFrame.from_dict(self.posts, orient='index')
 
     def update_scoring_function(self, scoring_function):
         self.scoring_function = scoring_function
