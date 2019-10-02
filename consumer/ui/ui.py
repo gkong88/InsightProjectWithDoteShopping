@@ -301,9 +301,6 @@ def consumer_seek_to_window_start(consumer: KafkaConsumer, time_window_start: da
     """
     if len(consumer.assignment()) == 0:
         # poll consumer to generate a topic partition assignment
-        for m in consumer:
-            pdb.set_tr
-            print("got a message")
         message = consumer.poll(1, 1)
         while len(message) == 0:
             message = consumer.poll(1, 1)
@@ -342,7 +339,6 @@ def main():
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
     servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
     # push_interval = datetime.timedelta(minutes=2)
-    pdb.set_trace()
     # connect to Kafka Topic.
     consumer = KafkaConsumer(topic_name,
                              bootstrap_servers=servers,
@@ -364,7 +360,6 @@ def main():
                 counter = 1
                 time_window_start = get_time_window_start(time_window_size)
                 remove_old_posts(posts, time_window_start)
-                pdb.set_trace()
 
 
 
