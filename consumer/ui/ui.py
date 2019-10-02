@@ -297,8 +297,8 @@ class RecentPostsTable:
 
     def __apply_score(self):
         for key, json_dict in self.posts.items():
-            json_dict['score'] = self.scoring_function.score(json_dict['PREVIEWS'], json_dict['FULL_VIEWS'])
-            json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEWS'])
+            json_dict['score'] = self.scoring_function.score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
+            json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEW'])
             json_dict['hotness_score'] = self.scoring_function.hotness_score()
 
     def __bulk_consume_events(self):
