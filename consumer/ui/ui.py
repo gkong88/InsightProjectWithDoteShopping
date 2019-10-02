@@ -277,27 +277,31 @@ class RecentPostsTable:
         self.time_window_start = None
         self.time_window_start_epoch = None
         self.topic_partition = None
-        self.seek_to_window_start() #initializes time_window_start, time_window_start_epoch, and topic_partition
+        self.__seek_to_window_start() #initializes time_window_start, time_window_start_epoch, and topic_partition
         self.posts = {}
-        self.bulk_consume_events()
+        self.__bulk_consume_events()
 
-    def snapshot(self) -> pd.DataFrame:
+    def get_snapshot(self) -> pd.DataFrame:
         """
 
         :return:
         """
-        self.garbage_collect_old()
-        self.bulk_consume_events()
-        self.apply_score()
+        self.__garbage_collect_old()
+        self.__bulk_consume_events()
+        self.__apply_score()
         return pd.DataFrame.from_dict(self.scores, orient='index')
 
-    def apply_score(self):
+    def update_scoring_function(self, scoring_function):
+        self.scoring_function = scoring_function
+        self.__apply_score()
+
+    def __apply_score(self):
         for key, json_dict in self.posts.items():
             json_dict['score'] = self.scoring_function.score(json_dict['PREVIEWS'], json_dict['FULL_VIEWS'])
             json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEWS'])
             json_dict['hotness_score'] = self.scoring_function.hotness_score()
 
-    def bulk_consume_events(self):
+    def __bulk_consume_events(self):
         """
         Reads kafka topic as an event source to reconstitute a "snapshot" of
         scores for all posts by replaying them into a dictionary.
@@ -310,7 +314,7 @@ class RecentPostsTable:
             if m.offset >= end_offset:
                 break
 
-    def garbage_collect_old(self):
+    def __garbage_collect_old(self):
         """
         Removes all tracked posts
         :return:
@@ -320,12 +324,12 @@ class RecentPostsTable:
             if self.posts[post_id]['POST_TIMESTAMP'] < self.time_window_start_epoch:
                 self.posts.pop(post_id)
 
-    def seek_to_window_start(self):
+    def __seek_to_window_start(self):
         """
         This function mutates the consumer to "seek" the kafka topic offset to that of the earliest event that
         is inside the time_window.
         """
-        self.update_time_window_start()
+        self.__update_time_window_start()
         if len(self.consumer.assignment()) == 0:
             # poll consumer to generate a topic partition assignment
             message = self.consumer.poll(1, 1)
@@ -339,7 +343,7 @@ class RecentPostsTable:
         # set the consumer to consume from this offset
         self.consumer.seek(self.topic_partition, start_offset)
 
-    def update_time_window_start(self):
+    def __update_time_window_start(self):
         """
         Returns start of time window from now - self.time_window_size.
 
@@ -362,7 +366,7 @@ def main():
                              value_deserializer=lambda x: json.loads(x.decode('utf-8')))
     scoring_function = ScoringFunctionCreator()
     posts = RecentPostsTable(consumer, scoring_function)
-    df = posts.snapshot()
+    df = posts.get_snapshot()
 
 
 
