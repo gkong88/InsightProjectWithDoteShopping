@@ -1,6 +1,8 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_daq as daq
+import dash_table
 import pandas as pd
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output
@@ -13,48 +15,84 @@ import time
 import datetime
 from pytz import timezone
 
-# markdown_text = '''
-# ### Dash and Markdown
-#
-# Dash apps can be written in Markdown.
-# Dash uses the [CommonMark] (http://commonmark.org/)
-# specification of Markdown
-# '''
-#
-# df_for_gdp_graph = pd.read_csv(
-#     'https://gist.githubusercontent.com/chriddyp/' +
-#     '5d1ea79569ed194d432e56108a04d188/raw/' +
-#     'a9f9e8076b837d541398e999dcbac2b2826a81f8/'+
-#     'gdp-life-exp-2007.csv')
-#
-# df_for_agriculture_table = pd.read_csv(
-#     'https://gist.githubusercontent.com/chriddyp/'
-#     'c78bf172206ce24f77d6363a2d754b59/raw/'
-#     'c353e8ef842413cae56ae3920b8fd78468aa4cb2/'
-#     'usa-agricultural-exports-2011.csv')
-#
-# df = pd.read_csv(
-#     'https://raw.githubusercontent.com/plotly/'
-#     'datasets/master/gapminderDataFiveYear.csv')
-#
-#
-#
-# def generate_table(dataframe, max_rows=10):
-#     return html.Table(
-#         # Header
-#         [html.Tr([html.Th(col) for col in dataframe.columns])] +
-#
-#         # Body
-#         [html.Tr([
-#             html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-#         ]) for i in range(min(len(dataframe), max_rows))]
-#     )
-#
-# external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-#
-# app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
-#
-# app.layout = html.Div(children = [
+
+def load_posts():
+    # config variables
+    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
+    servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
+    # push_interval = datetime.timedelta(minutes=2)
+    # connect to Kafka Topic.
+    consumer = KafkaConsumer(topic_name,
+                             bootstrap_servers=servers,
+                             auto_offset_reset='earliest',
+                             enable_auto_commit=True,
+                             group_id='my-group',
+                             value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+    scoring_function = ScoringFunctionCreator()
+    return RecentPostsTable(consumer, scoring_function)
+
+df = load_posts()
+
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
+
+colors = {
+    'background': '#111111',
+    'text': '#7FDBFF'
+}
+
+app.layout = html.Div([
+    html.H1(
+        children = 'Real-Time Scoring Dashboard',
+        style = {
+            'textAlign': 'center',
+            'colors': colors['text']
+        }
+    ),
+    dash_table.DataTable(
+        id='table',
+        columns=[{"name": i, "id": i} for i in df.columns],
+        data=df.to_dict('records')
+    ),
+    html.Div(
+        [
+        # html.Label('Exploit vs Explore'),
+        html.H2(
+            children = "CONTROL CENTER",
+            style = {
+                'textAlign': 'center',
+                'colors': colors['text']
+            }
+        ),
+        dcc.Slider(
+            id='hot-cold-slider',
+            min=0,
+            max=100,
+            marks={i: 'Label {}'.format(i) if i == 1 else str(i) for i in range(0, 110, 10)},
+            value=50
+        ),
+        daq.GraduatedBar(
+            id='hot-cold-bar',
+            color={"ranges":{"blue":[0,4],"red":[7,10]}},
+            showCurrentValue=True,
+            value=10
+        )
+        ]
+    )
+])
+
+@app.callback(
+    Output("hot-cold-bar", "value"),
+    [Input("hot-cold-slider", "value")],
+)
+def update_output(cold_value):
+    return cold_value
+
+
+
+
+
 #     dcc.Interval(
 #         id='interval-component',
 #         interval=1 * 1000,  # in milliseconds
@@ -227,53 +265,12 @@ from pytz import timezone
 #             hovermode='closest'
 #         )
 #     }
-#
-#
-# @app.callback(
-#     Output(component_id = 'my-div', component_property = 'children'),
-#     [Input(component_id = 'my-id', component_property = 'value')]
-# )
-# def update_output_div(input_value):
-#     return 'You\'ve entered "{}"'.format(input_value)
 
 
+def generate_graph(posts: RecentPostsTable) -> dcc.Graph:
+    pass
 
 
-
-
-def main():
-    # config variables
-    # TODO: refactor to take these in commandline
-    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
-    servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
-    # push_interval = datetime.timedelta(minutes=2)
-    # connect to Kafka Topic.
-    consumer = KafkaConsumer(topic_name,
-                             bootstrap_servers=servers,
-                             auto_offset_reset='earliest',
-                             enable_auto_commit=True,
-                             group_id='my-group',
-                             value_deserializer=lambda x: json.loads(x.decode('utf-8')))
-    scoring_function = ScoringFunctionCreator()
-    posts = RecentPostsTable(consumer, scoring_function)
-    df = posts.get_snapshot()
-
-    # last_push_timestamp = push_to_s3(scores)
-    # consumer.close()
-    # wait until the next push interval
-    # next_push_timestamp = last_push_timestamp + push_interval
-    # while datetime.datetime.now() < next_push_timestamp:
-    #     sleep_duration = max((next_push_timestamp - datetime.datetime.now()).seconds, 1)
-    #     print("sleeping until %s" % next_push_timestamp)
-    #     print("sleeping for %s seconds" % sleep_duration)
-    #     time.sleep(sleep_duration)
-
-
-df = pd.read_csv(
-    'https://gist.githubusercontent.com/chriddyp/'
-    'c78bf172206ce24f77d6363a2d754b59/raw/'
-    'c353e8ef842413cae56ae3920b8fd78468aa4cb2/'
-    'usa-agricultural-exports-2011.csv')
 
 
 
@@ -288,30 +285,7 @@ def generate_table(dataframe, max_rows=10):
         ]) for i in range(min(len(dataframe), max_rows))]
     )
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
-app.layout = html.Div(children = [
-    html.H1(children='MillionArmBandit'),
-    html.Div(children='''
-        Faster ranking optimization for content feeds
-    '''),
-    dcc.Graph(
-        id = 'example-graph',
-        figure = {
-            'data': [
-                {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
-                {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': 'Montreal'}
-            ],
-            'layout': {
-                'title': 'Dash Data Visualization'
-            }
-        }
-    ),
-    html.H4(children = 'US Agriculture Exports (2011)'),
-    generate_table(df)
-])
 
 if __name__ == '__main__':
-    main()
+    # main()
     app.run_server(debug = True)
