@@ -95,7 +95,7 @@ app.layout = html.Div([
         ),
         dcc.Interval(
             id='interval-component',
-            interval=3 * 1000,  # in milliseconds
+            interval=1 * 1000,  # in milliseconds
             n_intervals=0
         )
         ]
@@ -114,12 +114,12 @@ app.layout = html.Div([
 @app.callback(Output('my-graph', 'figure'),
               [Input('interval-component', 'n_intervals')])
 def update_graph_live(n):
-    df = posts.get_snapshot()
+    df = backup_df
+    #df = posts.get_snapshot()
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
     max_ts = max(df.POST_TIMESTAMP)
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
     figure = go.Figure(
-        id='my-figure',
         data=[
             go.Bar(
                 name='cold score',
@@ -165,4 +165,5 @@ def generate_table(dataframe, max_rows=10):
 
 if __name__ == '__main__':
     # main()
-    app.run_server(debug = True)
+    app.run_server(host = '0.0.0.0', debug = True)
+
