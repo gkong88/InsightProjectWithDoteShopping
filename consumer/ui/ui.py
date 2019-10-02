@@ -252,7 +252,7 @@ class ScoringFunctionCreator:
         self.hot_threshold_steepness = hot_threshold_steepness
 
     def score(self, previews, full_views):
-        return self.hotness_score(previews, full_views) + self.coldness_score(previews, full_views)
+        return self.hotness_score(previews, full_views) + self.coldness_score(previews)
 
     def hotness_score(self, previews, full_views):
         if previews + full_views == 0:
