@@ -299,7 +299,7 @@ class RecentPostsTable:
         for key, json_dict in self.posts.items():
             json_dict['score'] = self.scoring_function.score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
             json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEW'])
-            json_dict['hotness_score'] = self.scoring_function.hotness_score()
+            json_dict['hotness_score'] = self.scoring_function.hotness_score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
 
     def __bulk_consume_events(self):
         """
@@ -368,19 +368,15 @@ def main():
     posts = RecentPostsTable(consumer, scoring_function)
     df = posts.get_snapshot()
 
-
-
-
-        # last_push_timestamp = push_to_s3(scores)
-        # consumer.close()
-
-        # wait until the next push interval
-        # next_push_timestamp = last_push_timestamp + push_interval
-        # while datetime.datetime.now() < next_push_timestamp:
-        #     sleep_duration = max((next_push_timestamp - datetime.datetime.now()).seconds, 1)
-        #     print("sleeping until %s" % next_push_timestamp)
-        #     print("sleeping for %s seconds" % sleep_duration)
-        #     time.sleep(sleep_duration)
+    # last_push_timestamp = push_to_s3(scores)
+    # consumer.close()
+    # wait until the next push interval
+    # next_push_timestamp = last_push_timestamp + push_interval
+    # while datetime.datetime.now() < next_push_timestamp:
+    #     sleep_duration = max((next_push_timestamp - datetime.datetime.now()).seconds, 1)
+    #     print("sleeping until %s" % next_push_timestamp)
+    #     print("sleeping for %s seconds" % sleep_duration)
+    #     time.sleep(sleep_duration)
 
 
 df = pd.read_csv(
