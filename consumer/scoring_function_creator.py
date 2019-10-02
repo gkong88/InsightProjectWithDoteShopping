@@ -2,8 +2,8 @@ import math
 
 
 class ScoringFunctionCreator:
-    def __init__(self, max_coldness_score=50, min_previews_threshold=30, cold_threshold_steepness=0.5,
-                 max_hotness_score=50, ctr_hotness_threshold=0.12, hot_threshold_steepness=20):
+    def __init__(self, max_coldness_score=50, min_previews_threshold=40, cold_threshold_steepness=0.35,
+                 max_hotness_score=50, ctr_hotness_threshold=0.12, hot_threshold_steepness=17):
         self.max_coldness_score = max_coldness_score
         self.min_previews_threshold = min_previews_threshold
         self.cold_threshold_steepness = cold_threshold_steepness
