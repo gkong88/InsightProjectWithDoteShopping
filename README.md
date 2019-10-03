@@ -28,9 +28,19 @@ The directory structure for your repo should look like this:
     |   └── wsgi.py
     ├── ksql
     |   ├── README.md
+    |   ├── ksql_playbook.sql
+    |   └── udf
+    |       |── README.md
+    |       |── pom.xml
+    |       └── src/main/java/com/dote/ksql/udf
+    |           └── RTScoring.properties                       
     ├── reporter
     |   ├── README.md    
+    |   ├── report_generator.py
+    |   ├── living_table.py
+    |   └── scoring_function.py
     └── ui
         ├── README.md    
-        └── products.csv
-        └── order_products.csv
+        └── ui.py
+        └── wsgi.py
+
