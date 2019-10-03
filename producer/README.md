@@ -15,3 +15,7 @@ pip3 install flask
 pip3 install flask_restful
 pip3 install flatten_json
 pip3 install typing
+
+
+USAGE: 
+gunicorn --bind 0.0.0.0:8000 wsgi

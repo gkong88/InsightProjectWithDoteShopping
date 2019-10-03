@@ -49,8 +49,6 @@ class SegmentRESTProxyForKafka(Resource):
 
         :return: none
         """
-        #TODO: refactor this later,
-        # consider https://stackoverflow.com/questions/19073952/flask-restful-how-to-add-resource-and-pass-it-non-global-data
         flat_json_object = flatten_json.flatten(json.loads(request.data))
         segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
         flat_json_object["segment_timestamp"] = segment_timestamp
@@ -61,9 +59,6 @@ class SegmentRESTProxyForKafka(Resource):
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
         headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json", "Connection":'close'}
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
-        print("serving request")
-        #TODO: requests arent closing properly.
-        # increase open file limit / connections or garbage collect unused sessions
         return response.text
 
 api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka') 
@@ -71,7 +66,5 @@ api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
-    application.run(host='0.0.0.0', port = 5001)
-    #http_server = WSGIServer(('', 5000), application, log = None)
-    #http_server.serve_forever()
+    application.run(host='0.0.0.0', port = 5000)
 
