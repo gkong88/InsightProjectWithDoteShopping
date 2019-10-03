@@ -1,11 +1,8 @@
-
 from gevent.pywsgi import WSGIServer
 from flask import Flask, request
 import json
 from flask_restful import Resource, Api
-import confluent_kafka
 import flatten_json
-import pdb
 import datetime
 import requests
 
