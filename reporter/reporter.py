@@ -3,49 +3,116 @@ from kafka import KafkaConsumer
 import json
 from scoring_function import ScoringFunction
 from live_table import RecentPostsTable
-import time
 import datetime
-from pytz import timezone
 import threading
+import requests
+import time
 
 class Reporter:
-
-
-def init_posts_table():
-    # config variables
-    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
-    servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
-    # push_interval = datetime.timedelta(minutes=2)
-    # connect to Kafka Topic.
-    consumer = KafkaConsumer(topic_name,
-                             bootstrap_servers=servers,
-                             auto_offset_reset='earliest',
-                             enable_auto_commit=True,
-                             group_id='my-group',
-                             value_deserializer=lambda x: json.loads(x.decode('utf-8')))
-    scoring_function = ScoringFunction()
-    return RecentPostsTable(consumer, scoring_function, datetime.timedelta(days = 1))
-
-
-def update_posts(lock, live_posts_table):
     """
-    Bottom feeder to update posts when no reports are scheduled.
+    Generates reports to a topic for s3 and a topic for ui at user defined intervals.
 
-    :param lock:
-    :param live_posts_table:
-    :return:
+    Maintains a live table from updates with Kafka. Performs updates when no
     """
-    while True:
-        lock.acquire()
-        live_posts_table.update()
-        lock.release()
+    # Concurrency is managed with monitor pattern (locking) on methods that
+    # access the table state.
+    def __init__(self, topic_name: str, servers: str,
+                 scoring_function: ScoringFunction = ScoringFunction(),
+                 # s3_min_push_interval: datetime.timedelta = datetime.timedelta(minutes = 2),
+                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 3),
+                 # s3_topic_name: str = "s3_report",
+                 output_topic_name: str = "ui_report",
+                 kafka_rest_server: str = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082",
+                 ):
+        # init kafka consumer
+        consumer = KafkaConsumer(topic_name,
+                                 bootstrap_servers=servers,
+                                 auto_offset_reset='earliest',
+                                 enable_auto_commit=True,
+                                 group_id='my-group',
+                                 value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+        # init live table
+        self.table = RecentPostsTable(consumer, scoring_function, datetime.timedelta(days = 1))
+
+        # store timing variables
+        # self.s3_min_push_interval = s3_min_push_interval
+        self.min_push_interval = min_push_interval
+        self.last_push_timestamp = 0
+        self.next_push_timestamp = 0
+        # self.s3_topic_name = s3_topic_name
+        self.ui_topic_name = output_topic_name
+
+        # init lock for coordinating update and push events.
+        self.lock = threading.Lock()
+        self.threads = []
+
+        self.destination_url = kafka_rest_server + "/topics/" + output_topic_name
+        self.headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json",
+                   "Connection": 'close'}
 
 
-def push_s3(min_interval: datetime.timedelta = datetime.timedelta(minutes = 2)):
+    def run(self):
+        self.threads.append(threading.Thread(target = self.update_table_forever))
+        # self.threads.append(threading.Thread(self.push_s3_forever))
+        self.threads.append(threading.Thread(target = self.push_snapshot_forever))
+        for thread in self.threads():
+            thread.start()
+
+    def update_scoring_function(self):
+        # TODO: add functionality to incorporate function updates
+        # TODO: add listener for function updates that calls this
+        # TODO:
+        pass
+
+    def update_table_forever(self):
+        """
+        Bottom feeder to update posts when no reports are scheduled.
+
+        :param lock:
+        :param live_posts_table:
+        :return:
+        """
+        # TODO: bottom feeder is actually a first class citizen
+        # Refactor to prioritize lock requests on s3 -> ui -> posts, respectively.
+        while True:
+            self.lock.acquire()
+            self.table.update()
+            self.lock.release()
+
+    # def push_s3_forever(self):
+    #     while True:
+    #         self.lock.acquire()
+    #         df = self.table.get_snapshot()
+    #         self.lock.release()
+
+    def push_snapshot_forever(self):
+        while True:
+            self.lock.acquire()
+            posts = self.table.get_snapshot()
+            self.lock.release()
+
+            while datetime.datetime.now() < self.next_push_timestamp:
+                sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 1)
+                time.sleep(sleep_duration)
+            self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
+
+            kafka_payload = {"records": [{"value": posts}]}
+            response = requests.post(self.destination_url, json=kafka_payload, headers=self.headers)
+            response.raise_for_status()
+            response.close()
+
+    # def push_snapshot(self, min_interval: datetime.timedelta = datetime.timedelta(minutes = 2)):
+    #     # TODO
+    #     pass
+    #
+    # def push_s3(self, min_interval: datetime.timedelta = datetime.timedelta(minutes = 2)):
+    #     # TODO
+    #     pass
 
 
 if __name__ == "__main__":
-    lock = threading.Lock() #lock for live_posts_table
-    live_posts_table = init_posts_table()
+    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
+    servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
+    reporter = Reporter(topic_name, servers)
 
 
