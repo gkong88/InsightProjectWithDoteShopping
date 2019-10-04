@@ -106,7 +106,7 @@ class Reporter:
 
 if __name__ == "__main__":
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
-    kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
+    kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092,ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092,ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'
     output_topic_name = "recent_posts_scores_snapshot"
     kafka_rest_proxy_server = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082"
     reporter = Reporter(topic_name = topic_name,
