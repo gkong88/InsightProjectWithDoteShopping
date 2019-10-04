@@ -9,8 +9,6 @@ from dash.dependencies import Input, Output
 from kafka import KafkaConsumer
 import smart_open
 import json
-from scoring_function_creator import ScoringFunctionCreator
-from recent_posts_table import RecentPostsTable
 import time
 import datetime
 from pytz import timezone
@@ -76,9 +74,9 @@ app.layout = html.Div([
         #     value=10
         # )
         dash_table.DataTable(
-            id='my-table',
-            columns=[{"name": i, "id": i} for i in backup_df.columns],
-            data=backup_df.to_dict('records')
+            id='my-table'
+            #columns=[{"name": i, "id": i} for i in df.columns],
+            #data=backup_df.to_dict('records')
         ),
         dcc.Interval(
             id='interval-component',
@@ -104,7 +102,7 @@ app.layout = html.Div([
               [Input('interval-component', 'n_intervals')])
 def update_graph_live(n):
     consumer.seek_to_end(topic_partition)
-    records = consumer.poll(timeout_ms=0, max_records= 1)
+    records = consumer.poll(timeout_ms=1000, max_records= 1)
     if len(records) == 0:
         print("NO RECORDS FOUND")
 
@@ -140,6 +138,7 @@ def update_graph_live(n):
     )
     columns = [{"name": i, "id": i} for i in df.columns]
     data = df.to_dict('records')
+    print('graph updated')
     return figure, columns, data
 
 if __name__ == '__main__':
