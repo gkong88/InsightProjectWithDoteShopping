@@ -38,7 +38,6 @@ class SegmentRESTProxyForKafka(Resource):
             return int(json_object["properties_shoppable_post_id"])
         else:
             return -1
- 
 
     def post(self):
         """
