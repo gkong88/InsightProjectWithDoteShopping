@@ -16,16 +16,24 @@ import datetime
 from pytz import timezone
 
 
-backup_df = pd.read_pickle('sample_data')
-backup_df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in backup_df.POST_TIMESTAMP]
-max_ts = max(backup_df.POST_TIMESTAMP)
-backup_df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in backup_df.POST_TIMESTAMP]
-
+topic_name = 'recent_posts_scores_snapshot'
+kafka_servers = kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092,ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092,ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'
+consumer = KafkaConsumer(topic_name,
+                         bootstrap_servers=kafka_servers,
+                         auto_offset_reset='latest',
+                         enable_auto_commit=True,
+                         group_id='my-group',
+                         value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+if len(consumer.assignment()) == 0:
+    # poll consumer to generate a topic partition assignment
+    message = consumer.poll(1, 1)
+    while len(message) == 0:
+        message = consumer.poll(1, 1)
+topic_partition = consumer.assignment().pop()
+last_offset = -1
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
-
 colors = {
     'background': '#111111',
     'text': '#7FDBFF',
@@ -95,8 +103,12 @@ app.layout = html.Div([
                Output('my-table', 'data')],
               [Input('interval-component', 'n_intervals')])
 def update_graph_live(n):
-    df = backup_df
-    #df = posts.get_snapshot()
+    consumer.seek_to_end(topic_partition)
+    records = consumer.poll(timeout_ms=0, max_records= 1)
+    if len(records) == 0:
+        print("NO RECORDS FOUND")
+
+    df = json.loads(records[0])
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
     max_ts = max(df.POST_TIMESTAMP)
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
