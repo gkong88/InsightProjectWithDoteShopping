@@ -17,12 +17,11 @@ class Reporter:
     # Concurrency is managed with monitor pattern (locking) on methods that
     # access the table state.
     def __init__(self, topic_name: str, servers: str,
+                 output_topic_name: str, kafka_rest_proxy_server: str,
                  scoring_function: ScoringFunction = ScoringFunction(),
                  # s3_min_push_interval: datetime.timedelta = datetime.timedelta(minutes = 2),
-                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 3),
-                 # s3_topic_name: str = "s3_report",
-                 output_topic_name: str = "ui_report",
-                 kafka_rest_server: str = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082",
+                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 3)
+                 # s3_topic_name: str = "s3_report"
                  ):
         # init kafka consumer
         consumer = KafkaConsumer(topic_name,
@@ -46,7 +45,7 @@ class Reporter:
         self.lock = threading.Lock()
         self.threads = []
 
-        self.destination_url = kafka_rest_server + "/topics/" + output_topic_name
+        self.destination_url = kafka_rest_proxy_server + "/topics/" + output_topic_name
         self.headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json",
                    "Connection": 'close'}
 
@@ -112,7 +111,12 @@ class Reporter:
 
 if __name__ == "__main__":
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
-    servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
-    reporter = Reporter(topic_name, servers)
+    kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
+    output_topic_name = "ui_report",
+    kafka_rest_proxy_server = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082"
+    reporter = Reporter(topic_name = topic_name,
+                        kafka_servers = kafka_servers,
+                        output_topic_name = output_topic_name,
+                        kafka_rest_proxy_server = kafka_rest_proxy_server)
 
 
