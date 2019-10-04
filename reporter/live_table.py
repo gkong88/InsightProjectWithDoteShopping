@@ -1,13 +1,23 @@
 import pandas as pd
 from kafka import KafkaConsumer
-from scoring_function_creator import ScoringFunctionCreator
+from scoring_function import ScoringFunction
 import datetime
 
 
 class RecentPostsTable:
+    """
+    RecentPostsTable uses event sourcing on a "KTable" topic to reconstitute
+    a full table for taking "snapshots" as reports.
+
+    The constructor requires a KafkaConsumer to read "table updates" from.
+
+    The windowing on the table is configurable.
+    A user defined function can be supplied/updated that uses attributes
+    of the post to create a new, derived column.
+    """
     def __init__(self, consumer: KafkaConsumer,
-                 scoring_function=ScoringFunctionCreator(),
-                 time_window_size=datetime.timedelta(days=3)):
+                 time_window_size=datetime.timedelta(days=3),
+                 scoring_function=ScoringFunction()):
         self.consumer = consumer
         self.scoring_function = scoring_function
         self.time_window_size = time_window_size
@@ -18,7 +28,7 @@ class RecentPostsTable:
         self.posts = {}
         self.__bulk_consume_events()
 
-    def get_snapshot(self) -> pd.DataFrame:
+    def get_snapshot(self):
         """
 
         :return:
@@ -26,9 +36,15 @@ class RecentPostsTable:
         self.__garbage_collect_old()
         self.__bulk_consume_events()
         self.__apply_score()
-        return pd.DataFrame.from_dict(self.posts, orient='index')
+        return self.posts.copy()
 
-    def update_scoring_function(self, scoring_function):
+    def update_scoring_function(self, scoring_function: ScoringFunction):
+        """
+        Updates scoring function for this table. Reapplies function to all rows.
+
+        :param scoring_function:
+        :return:
+        """
         self.scoring_function = scoring_function
         self.__apply_score()
 
@@ -56,7 +72,6 @@ class RecentPostsTable:
         Removes all tracked posts
         :return:
         """
-        #TODO: Refactor with a secondary index, ordered by creation timestamp.
         for post_id in list(self.posts.keys()):
             if self.posts[post_id]['POST_TIMESTAMP'] < self.time_window_start_epoch:
                 self.posts.pop(post_id)
