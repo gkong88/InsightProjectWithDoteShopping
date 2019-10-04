@@ -19,9 +19,7 @@ class Reporter:
     def __init__(self, topic_name: str, kafka_servers: str,
                  output_topic_name: str, kafka_rest_proxy_server: str,
                  scoring_function: ScoringFunction = ScoringFunction(),
-                 # s3_min_push_interval: datetime.timedelta = datetime.timedelta(minutes = 2),
                  min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 2)
-                 # s3_topic_name: str = "s3_report"
                  ):
         # init kafka consumer
         consumer = KafkaConsumer(topic_name,
@@ -34,12 +32,8 @@ class Reporter:
         self.table = LiveTable(consumer, datetime.timedelta(days = 1), scoring_function)
 
         # store timing variables
-        # self.s3_min_push_interval = s3_min_push_interval
         self.min_push_interval = min_push_interval
-        self.last_push_timestamp = datetime.datetime(1970, 1, 1)
         self.next_push_timestamp = datetime.datetime(1970, 1, 1)
-        # self.s3_topic_name = s3_topic_name
-        self.ui_topic_name = output_topic_name
 
         # init lock for coordinating update and push events.
         self.lock = threading.Lock()
@@ -113,7 +107,7 @@ class Reporter:
 if __name__ == "__main__":
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
     kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092'
-    output_topic_name = "ui_report"
+    output_topic_name = "recent_posts_scores_snapshot"
     kafka_rest_proxy_server = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082"
     reporter = Reporter(topic_name = topic_name,
                         kafka_servers = kafka_servers,
