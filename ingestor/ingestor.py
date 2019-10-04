@@ -46,20 +46,26 @@ class SegmentRESTProxyForKafka(Resource):
 
         :return: none
         """
+        # flatten json so nested attributes can be used in KSQL analysis
         flat_json_object = flatten_json.flatten(json.loads(request.data))
+        # extract timestamp and add it to json
         segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
         flat_json_object["segment_timestamp"] = segment_timestamp
+        # extract key to mark kafka event
         key = self.get_key(flat_json_object)
+        # package data in Kafka REST API format
         kafka_payload_data = {"records": [{"value": flat_json_object, "key": key}]}
+        # create topic name based on event attribute of incoming data
         topic = ''.join(c for c in str(flat_json_object.get("type") + flat_json_object.get("event")) if
                         c.isalnum()) + "_00_raw_flatJSON"
+        # encode topic name that event should goto as a URI on top of URL
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
         headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json", "Connection":'close'}
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
         return response.text
 
-api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka') 
 
+api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka') 
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
