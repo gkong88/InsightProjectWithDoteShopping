@@ -4,9 +4,9 @@ from scoring_function import ScoringFunction
 import datetime
 
 
-class RecentPostsTable:
+class LiveTable:
     """
-    RecentPostsTable uses event sourcing on a "KTable" topic to reconstitute
+    LiveTable uses event sourcing on a "KTable" topic to reconstitute
     a full table for taking "snapshots" as reports.
 
     The constructor requires a KafkaConsumer to read "table updates" from.
@@ -26,7 +26,7 @@ class RecentPostsTable:
         self.topic_partition = None
         self.__seek_to_window_start() #initializes time_window_start, time_window_start_epoch, and topic_partition
         self.posts = {}
-        self.__bulk_consume_events()
+        self.bulk_consume_events()
 
     def get_snapshot(self):
         """
@@ -34,7 +34,7 @@ class RecentPostsTable:
         :return:
         """
         self.__garbage_collect_old()
-        self.__bulk_consume_events()
+        self.bulk_consume_events()
         self.__apply_score()
         return self.posts.copy()
 
@@ -54,7 +54,7 @@ class RecentPostsTable:
             json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEW'])
             json_dict['hotness_score'] = self.scoring_function.hotness_score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
 
-    def __bulk_consume_events(self):
+    def bulk_consume_events(self):
         """
         Reads kafka topic as an event source to reconstitute a "snapshot" of
         scores for all posts by replaying them into a dictionary.
