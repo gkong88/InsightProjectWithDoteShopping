@@ -65,7 +65,7 @@ class SegmentRESTProxyForKafka(Resource):
         return response.text
 
 
-api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka') 
+api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
 
 if __name__ == '__main__':
     api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
