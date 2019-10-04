@@ -28,14 +28,16 @@ class LiveTable:
         self.posts = {}
         self.bulk_consume_events()
 
-    def get_snapshot(self):
-        """
-
-        :return:
-        """
+    def update(self):
         self.__garbage_collect_old()
         self.bulk_consume_events()
         self.__apply_score()
+
+    def get_snapshot(self):
+        """
+
+        :return: return a copy of current state of table
+        """
         return self.posts.copy()
 
     def update_scoring_function(self, scoring_function: ScoringFunction):
