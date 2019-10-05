@@ -34,8 +34,17 @@ class SegmentRESTProxyForKafka(Resource):
         return "this is an endpoint for segment"
 
     def get_key(self, json_object):
+        """
+        Extracts a key for a given event type, if applicable.
+
+        Otherwise, returns a single key value.
+        """
+        # keys determine kafka topic partitions.
+        # when performing stream analysis w/ joins, keys must be used on the join attribute.
         if str(json_object.get("event")) in ["Viewed Shoppable Fit", "Created Story"]:
             return int(json_object["properties_shoppable_post_id"])
+        elif str(json_object.get("event")) in ['Assigned AB Test Shard']:
+            return int(json_object["user_id"]):
         else:
             return -1
 
