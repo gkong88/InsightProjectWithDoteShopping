@@ -44,7 +44,7 @@ class SegmentRESTProxyForKafka(Resource):
         if str(json_object.get("event")) in ["Viewed Shoppable Fit", "Created Story"]:
             return int(json_object["properties_shoppable_post_id"])
         elif str(json_object.get("event")) in ['Assigned AB Test Shard']:
-            return int(json_object["user_id"]):
+            return int(json_object["user_id"])
         else:
             return -1
 
@@ -76,6 +76,5 @@ class SegmentRESTProxyForKafka(Resource):
 api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
 
 if __name__ == '__main__':
-    api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
     application.run(host='0.0.0.0', port = 5000)
 
