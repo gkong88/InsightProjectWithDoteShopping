@@ -13,8 +13,7 @@ api = Api(application)
 
 @application.route("/")
 def hello():
-    print("got the request")
-    return "<h1 style='color:blue'>Hello There!</h1>" 
+    return "<h1 style='color:blue'>This server is a connector from Segment to Kafka!</h1>" 
 
 def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
     """
@@ -44,15 +43,15 @@ class SegmentRESTProxyForKafka(Resource):
         if str(json_object.get("event")) in ["Viewed Shoppable Fit", "Created Story"]:
             return int(json_object["properties_shoppable_post_id"])
         elif str(json_object.get("event")) in ['Assigned AB Test Shard']:
-            return int(json_object["user_id"])
+            return json_object["userId"]
         else:
             return -1
 
     def post(self):
         """
-        creates kafka event from json object
+        Creates kafka event from json object
 
-        :return: none
+        :return: response code of post request to Kafka REST Proxy
         """
         # flatten json so nested attributes can be used in KSQL analysis
         flat_json_object = flatten_json.flatten(json.loads(request.data))
