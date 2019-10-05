@@ -12,3 +12,8 @@ Requirements:
 ## Loading config files
 
 Run loads_config.sh to load all kafka (and related services) config files into their default locations for confluent kafka.
+
+
+#TODO: 
+    for handoff, write a script that generates ALL topics used with the corrent number of partitions needed. 
+	
