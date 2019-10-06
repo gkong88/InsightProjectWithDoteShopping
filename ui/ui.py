@@ -19,7 +19,8 @@ default_config = {'bootstrap_servers': bootstrap_servers,
                   'auto_offset_reset': 'latest',
                   'enable_auto_commit': True,
                   'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
-
+report_topic_name = 'recent_posts_scores_snapshot'
+log_topic_name = 'pipeline_logs'
 
 def get_latest_message(input_topic_name: str):
     """
@@ -108,50 +109,24 @@ app.layout = html.Div([
 
 
 # Multiple components can update everytime interval gets fired.
-@app.callback([Output('my-graph', 'figure'),
-               Output('my-table', 'columns'),
-               Output('my-table', 'data')],
+@app.callback(Output('my-graph', 'figure'),
               [Input('interval-component', 'n_intervals')])
 def update_graph_live(n):
-    consumer.seek_to_end(topic_partition)
-    records = consumer.poll(timeout_ms=1000, max_records= 1)
-    if len(records) == 0:
-        print("NO RECORDS FOUND")
-
-    df = json.loads(records[0])
+    message = get_latest_message(report_topic_name)
+    df = pd.read_json(json.dumps(message.value), orient='index')
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
     max_ts = max(df.POST_TIMESTAMP)
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
-    figure = go.Figure(
-        data=[
-            go.Bar(
-                name='cold score',
-                x=df['tsnorm'],
-                # x = df['PROPERTIES_SHOPPABLE_POST_ID'],
-                y=df['coldness_score'],
-                width=0.1,
-                # colors=colors['cold']
-            ),
-            go.Bar(
-                name='hot score',
-                x=df['tsnorm'],
-                # x = df['PROPERTIES_SHOPPABLE_POST_ID'],
-                y=df['hotness_score'],
-                # colors=colors['hot']
-                width=0.1,
-            )
-        ],
-        layout=go.Layout(
+    figure = {
+        'data': [go.Bar(name='cold score',x=df['tsnorm'],y=df['coldness_score'],width=0.1,colors=colors['cold']),
+                go.Bar(name='hot score', x=df['tsnorm'], y=df['hotness_score'], colors=colors['hot'], wid=0.1)],
+        'layout': go.Layout(
             title='Post Scores in Past Three Days',
             barmode='stack',
-            xaxis=dict(title='Hours Ago', range=[-6, 0]),
+            xaxis=dict(title='Hours Ago', range=[-3, 0]),
             yaxis=dict(title='Score')
-        )
-    )
-    columns = [{"name": i, "id": i} for i in df.columns]
-    data = df.to_dict('records')
-    print('graph updated')
-    return figure, columns, data
+        )}
+    return figure
 
 if __name__ == '__main__':
     # main()
