@@ -34,5 +34,5 @@ def heartbeat(bootstrap_servers, topic_name, key):
     :param topic_name:
     :return:
     """
-    p = KafkaProducer(bootstrap_servers = bootstrap_servers)
-    p.send(topic = topic_name, timestamp_ms = int(time.time() * 1000), key = key)
+    p = KafkaProducer(bootstrap_servers=bootstrap_servers)
+    p.send(topic=topic_name, timestamp_ms=int(time.time() * 1000), key=key)
