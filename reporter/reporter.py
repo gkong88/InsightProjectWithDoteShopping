@@ -94,7 +94,7 @@ class Reporter:
 
 
 if __name__ == "__main__":
-    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
+    input_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
     kafka_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name': 'pipeline_logs', 'key': 'reporter'}
     RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
 
-    reporter = Reporter(topic_name = topic_name,
+    reporter = Reporter(topic_name = input_topic_name,
                         kafka_servers = kafka_servers,
                         output_topic_name = output_topic_name,
                         kafka_rest_proxy_server = kafka_rest_proxy_server)
