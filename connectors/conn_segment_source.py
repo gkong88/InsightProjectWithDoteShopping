@@ -33,7 +33,7 @@ def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
     segment_timestamp_datetime = datetime.datetime.strptime(segment_timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
     return int((segment_timestamp_datetime - epoch).total_seconds() * 1000)
 
-class SegmentRESTProxyForKafka(Resource):
+class SegmentSourceConnector(Resource):
     """
         REST API Sink for segment webhook that publishes data to kafka
     """
@@ -82,7 +82,7 @@ class SegmentRESTProxyForKafka(Resource):
         return return_code
 
 
-api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
+api.add_resource(SegmentSourceConnector, '/publishToKafka')
 resource.setrlimit(resource.RLIMIT_NOFILE, (999999, 999999))
 
 if __name__ == '__main__':
