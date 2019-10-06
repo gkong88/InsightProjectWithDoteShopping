@@ -7,7 +7,7 @@ import threading
 import requests
 import time
 import os, sys
-sys.path.insert(0, os.path.abspath('../util'))
+sys.path.insert(0, os.path.abspath('../../util'))
 from utility import RepeatPeriodically, heartbeat
 
 class Reporter:
