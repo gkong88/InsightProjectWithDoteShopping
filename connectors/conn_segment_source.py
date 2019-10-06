@@ -79,7 +79,7 @@ class SegmentRESTProxyForKafka(Resource):
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
         return_code = response.text
         response.close()
-        return return code
+        return code
 
 
 api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
