@@ -21,7 +21,7 @@ class Reporter:
     def __init__(self, topic_name: str, kafka_servers: str,
                  output_topic_name: str, kafka_rest_proxy_server: str,
                  scoring_function: ScoringFunction = ScoringFunction(),
-                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 2)
+                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 1)
                  ):
         # init kafka consumer
         consumer = KafkaConsumer(topic_name,
