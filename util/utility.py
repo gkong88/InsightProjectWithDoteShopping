@@ -4,7 +4,6 @@ import threading
 import time
 
 
-
 class RepeatPeriodically:
     """
     Class that periodically executes a function at a specified interval
@@ -23,6 +22,7 @@ class RepeatPeriodically:
     def run(self):
         self.fn(**self.kwargs)
         threading.Timer(self.interval, self.run).start()
+
 
 def heartbeat(bootstrap_servers, topic_name, key):
     """
