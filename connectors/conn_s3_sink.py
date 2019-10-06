@@ -87,11 +87,13 @@ class S3SinkConnector:
         # poll until new data is added to topic
         while self.consumer.end_offsets([self.topic_partition])[self.topic_partition] == \
                 self.consumer.position(self.topic_partition):
-            time.sleep(1) #seconds
+            print("waiting for new messages...")
+            time.sleep(3) #seconds
         self.consumer.seek_to_end(self.topic_partition)
         try:
             return self.consumer.poll(timeout_ms = 5000, max_records = 1)[self.topic_partition][0]
         except:
+            print('failed to get next message')
             return None
 
 
