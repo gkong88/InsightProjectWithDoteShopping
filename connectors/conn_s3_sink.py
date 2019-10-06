@@ -7,6 +7,7 @@ import time
 import os, sys
 sys.path.insert(0, os.path.abspath('../util'))
 from utility import RepeatPeriodically, heartbeat
+from typing import Sequence
 
 
 class S3SinkConnector:
@@ -14,11 +15,11 @@ class S3SinkConnector:
     Sink Connector to S3 from stream analysis.
 
     """
-    def __init__(self, input_topic_name: str, bootstrap_servers: list[str],
+    def __init__(self, input_topic_name: str, bootstrap_servers: Sequence[str],
                  s3_bucket_path: str,
                  log_topic_name: str,
-                 min_push_interval: datetime.timedelta = datetime.timedelta(minutes=2)
-                 ):
+                 min_push_interval: datetime.timedelta):
+        bootstrap_servers = list(bootstrap_servers)
         self.consumer = KafkaConsumer(bootstrap_servers=bootstrap_servers,
                                       auto_offset_reset='latest',
                                       enable_auto_commit=True,
@@ -86,7 +87,7 @@ class S3SinkConnector:
         # poll until new data is added to topic
         while self.consumer.end_offsets([self.topic_partition])[self.topic_partition] == \
                 self.consumer.position(self.topic_partition):
-            time.sleep(secs=1)
+            time.sleep(1) #seconds
         self.consumer.seek_to_end(self.topic_partition)
         try:
             return self.consumer.poll(timeout_ms = 5000, max_records = 1)[self.topic_partition][0]
