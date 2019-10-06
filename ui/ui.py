@@ -76,7 +76,7 @@ app.layout = html.Div([
                     y=df['coldness_score'],
                     name='cold',
                     width=0.1,
-                    colors=colors['cold']
+                    #color=colors['cold']
                 )
             ]
         )
