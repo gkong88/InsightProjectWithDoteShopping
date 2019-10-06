@@ -29,7 +29,7 @@ class S3SinkConnector:
         self.consumer.assign([self.topic_partition])
 
         self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
-                                      value_serializer=lambda x: json.dumps(x))
+                                      value_serializer=lambda x: json.dumps(x).encode('utf-8'))
         self.log_topic_name = log_topic_name
 
         self.s3_bucket_path = s3_bucket_path
@@ -96,11 +96,11 @@ class S3SinkConnector:
 
 
 if __name__ == "__main__":
-    input_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
+    input_topic_name = 'recent_posts_scores_snapshot'
     bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
-    s3_bucket_path = 's3: // dote - fit - scores / calculated_score_2 /'
+    s3_bucket_path = 's3://dote-fit-scores/calculated_score_2/'
     log_topic_name = 'connector_s3_sink_push_log'
     min_push_interval = datetime.timedelta(minutes=2)
 
