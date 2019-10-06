@@ -19,3 +19,10 @@ pip3 install typing
 
 USAGE: 
 gunicorn --bind 0.0.0.0:5000 wsgi --daemon
+
+# allow for unlimited TCP connections.i
+ulimit -n 10240
+
+
+sudo python3 ingestor.py &
+disown <process id> 
