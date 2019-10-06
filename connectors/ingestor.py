@@ -5,10 +5,17 @@ from flask_restful import Resource, Api
 import flatten_json
 import datetime
 import requests
+import os, sys
+sys.path.insert(0, os.path.abspath('..'))
+from util.utility import RepeatPeriodically, heartbeat
+
 
 # Initialize central registry for your app
 application = Flask(__name__)
 api = Api(application)
+kafka_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092','ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092','ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name':'ingestor_heartbeat'}
+RepeatPeriodically(fn = heartbeat, interval = 300, kwargs = heartbeat_kwargs)
 
 
 @application.route("/")
