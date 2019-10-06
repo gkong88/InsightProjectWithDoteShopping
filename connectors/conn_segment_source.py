@@ -6,6 +6,7 @@ import flatten_json
 import datetime
 import requests
 import os, sys
+import resource
 sys.path.insert(0, os.path.abspath('../util'))
 from utility import RepeatPeriodically, heartbeat
 
@@ -76,10 +77,13 @@ class SegmentRESTProxyForKafka(Resource):
         destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
         headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json", "Connection":'close'}
         response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
-        return response.text
+        return_code = response.text
+        response.close()
+        return return code
 
 
 api.add_resource(SegmentRESTProxyForKafka, '/publishToKafka')
+resource.setrlimit(resource.RLIMIT_NOFILE, (999999, 999999))
 
 if __name__ == '__main__':
     application.run(host='0.0.0.0', port = 5000)
