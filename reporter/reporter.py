@@ -7,6 +7,9 @@ import datetime
 import threading
 import requests
 import time
+import os, sys
+sys.path.insert(0, os.path.abspath('../util'))
+from utility import RepeatPeriodically, heartbeat
 
 class Reporter:
     """
@@ -44,8 +47,14 @@ class Reporter:
                    "Connection": 'close'}
 
     def run(self):
+        """
+        Starts reporter.
+        """
+        # updates are always "enqueued"
         self.threads.append(threading.Thread(target = self.update_table_forever))
-        # self.threads.append(threading.Thread(self.push_s3_forever))
+        # snapshots are "enqueued" periodically.
+        # uses lock management to guarantee it only needs to wait
+        # at most 1 update cycle before pushing
         self.threads.append(threading.Thread(target = self.push_snapshot_forever))
         for thread in self.threads:
             thread.start()
@@ -53,30 +62,21 @@ class Reporter:
     def update_scoring_function(self):
         # TODO: add functionality to incorporate function updates
         # TODO: add listener for function updates that calls this
-        # TODO:
         pass
 
     def update_table_forever(self):
         """
-        Bottom feeder to update posts when no reports are scheduled.
+        Update posts when no reports are scheduled.
 
         :param lock:
         :param live_posts_table:
         :return:
         """
-        # TODO: bottom feeder is actually a first class citizen
-        # Refactor to prioritize lock requests on s3 -> ui -> posts, respectively.
         while True:
             self.lock.acquire()
             self.table.update()
             self.lock.release()
             print("updated")
-
-    # def push_s3_forever(self):
-    #     while True:
-    #         self.lock.acquire()
-    #         df = self.table.get_snapshot()
-    #         self.lock.release()
 
     def push_snapshot_forever(self):
         while True:
@@ -95,25 +95,22 @@ class Reporter:
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
             print("pushed snapshot")
 
-    # def push_snapshot(self, min_interval: datetime.timedelta = datetime.timedelta(minutes = 2)):
-    #     # TODO
-    #     pass
-    #
-    # def push_s3(self, min_interval: datetime.timedelta = datetime.timedelta(minutes = 2)):
-    #     # TODO
-    #     pass
-
 
 if __name__ == "__main__":
     topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
-    kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092,ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092,ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'
-    output_topic_name = "recent_posts_scores_snapshot2"
+    kafka_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
+                     'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                     'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+    output_topic_name = "recent_posts_scores_snapshot"
     kafka_rest_proxy_server = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082"
+
+    heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name': 'pipeline_logs', 'key': 'conn_segment_source'}
+    RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
+
     reporter = Reporter(topic_name = topic_name,
                         kafka_servers = kafka_servers,
                         output_topic_name = output_topic_name,
-                        kafka_rest_proxy_server = kafka_rest_proxy_server,
-                        num_partitions = 1)
+                        kafka_rest_proxy_server = kafka_rest_proxy_server)
     reporter.run()
 
 
