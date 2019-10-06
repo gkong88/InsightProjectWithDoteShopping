@@ -74,6 +74,7 @@ class Reporter:
             self.lock.acquire()
             self.table.update()
             self.lock.release()
+            print('updated')
 
     def push_snapshot_forever(self):
         while True:
@@ -90,6 +91,7 @@ class Reporter:
             response.raise_for_status()
             response.close()
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
+            print('pushed')
 
 
 if __name__ == "__main__":
