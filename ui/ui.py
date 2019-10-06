@@ -6,29 +6,41 @@ import dash_table
 import pandas as pd
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output
-from kafka import KafkaConsumer
-import smart_open
+from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 import json
 import time
 import datetime
 from pytz import timezone
 
+bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
+                     'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                     'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+default_config = {'bootstrap_servers': bootstrap_servers,
+                  'auto_offset_reset': 'latest',
+                  'enable_auto_commit': True,
+                  'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
 
-topic_name = 'recent_posts_scores_snapshot'
-kafka_servers = kafka_servers = 'ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092,ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092,ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'
-consumer = KafkaConsumer(topic_name,
-                         bootstrap_servers=kafka_servers,
-                         auto_offset_reset='latest',
-                         enable_auto_commit=True,
-                         group_id='my-group',
-                         value_deserializer=lambda x: json.loads(x.decode('utf-8')))
-if len(consumer.assignment()) == 0:
-    # poll consumer to generate a topic partition assignment
-    message = consumer.poll(1, 1)
-    while len(message) == 0:
-        message = consumer.poll(1, 1)
-topic_partition = consumer.assignment().pop()
-last_offset = -1
+
+def get_latest_message(input_topic_name: str):
+    """
+
+    :param input_topic_name:
+        REQUIRES only one partition for global ordering
+    :return:
+    """
+    # create consumer for topic
+    consumer = KafkaConsumer(**default_config)
+    partition_number = list(consumer.partitions_for_topic(input_topic_name))[0]
+    topic_partition = TopicPartition(input_topic_name, partition_number)
+    consumer.assign([topic_partition])
+
+    # get latest message
+    consumer.seek(topic_partition, consumer.highwater(topic_partition) - 1)
+    message = consumer.poll(3000, 1)
+
+    # close connection and return result
+    consumer.close()
+    return message
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
