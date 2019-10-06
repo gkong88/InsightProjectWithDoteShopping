@@ -29,7 +29,6 @@ class Reporter:
                                  bootstrap_servers=kafka_servers,
                                  auto_offset_reset='earliest',
                                  enable_auto_commit=True,
-                                 group_id='my-group',
                                  value_deserializer=lambda x: json.loads(x.decode('utf-8')))
         # init live table
         self.table = LiveTable(consumer, datetime.timedelta(days = 1), scoring_function)
@@ -76,7 +75,6 @@ class Reporter:
             self.lock.acquire()
             self.table.update()
             self.lock.release()
-            print("updated")
 
     def push_snapshot_forever(self):
         while True:
@@ -93,7 +91,6 @@ class Reporter:
             response.raise_for_status()
             response.close()
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
-            print("pushed snapshot")
 
 
 if __name__ == "__main__":
@@ -104,7 +101,7 @@ if __name__ == "__main__":
     output_topic_name = "recent_posts_scores_snapshot"
     kafka_rest_proxy_server = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082"
 
-    heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name': 'pipeline_logs', 'key': 'conn_segment_source'}
+    heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name': 'pipeline_logs', 'key': 'reporter'}
     RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
 
     reporter = Reporter(topic_name = topic_name,
