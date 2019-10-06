@@ -92,7 +92,7 @@ class S3SinkConnector:
                 self.consumer.position(self.topic_partition):
             print("waiting for new messages...")
             time.sleep(3) #seconds
-        self.consumer.seek_to_end(self.topic_partition)
+        self.consumer.seek(self.topic_partition, self.consumer.highwater(self.topic_partition) - 1)
         try:
             return self.consumer.poll(timeout_ms = 5000, max_records = 1)[self.topic_partition][0]
         except:
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
     s3_bucket_path = 's3://dote-fit-scores/calculated_score_2/'
     log_topic_name = 'connector_s3_sink_push_log'
-    min_push_interval = datetime.timedelta(minutes=2)dir
+    min_push_interval = datetime.timedelta(minutes=2)
 
     heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'pipeline_logs', 'key': 'conn_s3_sink'}
     RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
