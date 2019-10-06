@@ -66,7 +66,7 @@ class Reporter:
 
     def update_table_forever(self):
         """
-        Update posts when no reports are scheduled.
+        Update table when no reports are scheduled.
 
         :param lock:
         :param live_posts_table:
@@ -97,7 +97,7 @@ class Reporter:
 
 
 if __name__ == "__main__":
-    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2'
+    topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
     kafka_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
