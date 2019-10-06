@@ -16,7 +16,7 @@ application = Flask(__name__)
 api = Api(application)
 kafka_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092','ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092','ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
 heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name':'pipeline_logs', 'key': 'conn_segment_source'}
-RepeatPeriodically(fn = heartbeat, interval = 300, kwargs = heartbeat_kwargs)
+RepeatPeriodically(fn = heartbeat, interval = 300, kwargs = heartbeat_kwargs).run()
 
 
 @application.route("/")
