@@ -28,3 +28,25 @@ ulimit -n 10240
 
 sudo python3 ingestor.py &
 disown <process id> 
+
+
+s3 sink dependencies:
+
+
+Dependencies:
+
+pip3 install smart_open
+
+pip3 install kafka
+
+pip3 install pytz
+
+~/.aws/config
+
+[default]
+region=us-west-2
+
+
+~/.aws/credentials
+[default]
+.... 
