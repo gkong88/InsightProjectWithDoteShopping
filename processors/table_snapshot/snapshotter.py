@@ -1,6 +1,5 @@
 import pandas as pd
-from kafka import KafkaConsumer
-import json
+from kafka import KafkaConsumerimport json
 from scoring_function import ScoringFunction
 from live_table import LiveTable
 import datetime
