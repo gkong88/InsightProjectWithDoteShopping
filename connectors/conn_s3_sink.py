@@ -14,16 +14,19 @@ class S3SinkConnector:
     """
     Sink Connector to S3 from stream analysis.
 
+    REQUIRES input topic to have only one partition for global ordering.
     """
     def __init__(self, input_topic_name: str, bootstrap_servers: Sequence[str],
                  s3_bucket_path: str,
                  log_topic_name: str,
                  min_push_interval: datetime.timedelta):
+        # cast sequence to list, if not already list. precondition of KafkaConsumer
         bootstrap_servers = list(bootstrap_servers)
         self.consumer = KafkaConsumer(bootstrap_servers=bootstrap_servers,
                                       auto_offset_reset='latest',
                                       enable_auto_commit=True,
                                       value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+        # get partition no. assuming only one, per precondition
         partition_number = list(self.consumer.partitions_for_topic(input_topic_name))[0]
         self.topic_partition = TopicPartition(input_topic_name, partition_number)
         self.consumer.assign([self.topic_partition])
@@ -104,7 +107,7 @@ if __name__ == "__main__":
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
     s3_bucket_path = 's3://dote-fit-scores/calculated_score_2/'
     log_topic_name = 'connector_s3_sink_push_log'
-    min_push_interval = datetime.timedelta(minutes=2)
+    min_push_interval = datetime.timedelta(minutes=2)dir
 
     heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'pipeline_logs', 'key': 'conn_s3_sink'}
     RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
