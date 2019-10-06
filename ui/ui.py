@@ -35,8 +35,8 @@ def get_latest_message(input_topic_name: str):
     consumer.assign([topic_partition])
 
     # get latest message
-    consumer.seek(topic_partition, consumer.highwater(topic_partition) - 1)
-    message = consumer.poll(3000, 1)
+    consumer.seek(topic_partition, consumer.end_offsets([topic_partition])[topic_partition] - 1)
+    message = consumer.poll(3000, 1)[topic_partition][0]
 
     # close connection and return result
     consumer.close()
