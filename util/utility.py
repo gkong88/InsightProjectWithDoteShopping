@@ -45,7 +45,7 @@ def get_latest_message(input_topic_name: str,
                                                              'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'],
                                        'auto_offset_reset': 'earliest',
                                        'enable_auto_commit': False,
-                                       'value_deserializer':  lambda x: json.loads(x.decode('utf-8'))}):
+                                       'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}):
     """
 
     :param input_topic_name: Kafka topic name to read from
