@@ -68,7 +68,7 @@ app.layout = html.Div([
         }
     ),
     dcc.Graph(
-        id='my-graph',
+        id='bar_graph',
         figure={
             'data': [{'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'cold', 'width': 0.05, 'marker_color': colors['hot']},
                      {'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'cold', 'width': 0.05, 'marker_color': colors['cold']}],
@@ -78,7 +78,52 @@ app.layout = html.Div([
                        'yaxis': {'title': 'Score'}
                        }
         }
+    ),
+    dcc.Interval(
+        id='interval-component',
+        interval=1 * 1000,  # in milliseconds
+        n_intervals=0
     )
+
+])
+
+
+
+
+# Multiple components can update everytime interval gets fired.
+@app.callback(Output('bar_graph', 'figure'),
+              [Input('interval-component', 'n_intervals')])
+def update_graph_live(n):
+    message = get_latest_message(report_topic_name)
+    df = pd.read_json(json.dumps(message.value), orient='index')
+    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
+    max_ts = max(df.POST_TIMESTAMP)
+    df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
+    figure = {
+        'data': [{'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'cold', 'width': 0.05,
+                  'marker_color': colors['hot']},
+                 {'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'cold', 'width': 0.05,
+                  'marker_color': colors['cold']}],
+        'layout': {'title': 'Post Scores',
+                   'barmode': 'stack',
+                   'xaxis': {'title': 'Hours Ago', 'range': [-3, 0]},
+                   'yaxis': {'title': 'Score'}
+                   }
+    }
+    return figure
+
+if __name__ == '__main__':
+    # main()
+    app.run_server(host = '0.0.0.0', port = 8050, debug = True)
+
+
+# @app.callback(
+#     Output("hot-cold-bar", "value"),
+#     [Input("hot-cold-slider", "value")],
+# )
+# def update_output(cold_value):
+#     return cold_value
+
 # ,
     # html.Div(
     #     [
@@ -115,37 +160,3 @@ app.layout = html.Div([
     #     )
     #     ]
     # )
-])
-
-# @app.callback(
-#     Output("hot-cold-bar", "value"),
-#     [Input("hot-cold-slider", "value")],
-# )
-# def update_output(cold_value):
-#     return cold_value
-
-
-# Multiple components can update everytime interval gets fired.
-# @app.callback(Output('my-graph', 'figure'),
-#               [Input('interval-component', 'n_intervals')])
-# def update_graph_live(n):
-#     message = get_latest_message(report_topic_name)
-#     df = pd.read_json(json.dumps(message.value), orient='index')
-#     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
-#     max_ts = max(df.POST_TIMESTAMP)
-#     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
-#     figure = {
-#         'data': [go.Bar(name='cold score',x=df['tsnorm'],y=df['coldness_score'],width=0.1,colors=colors['cold']),
-#                 go.Bar(name='hot score', x=df['tsnorm'], y=df['hotness_score'], colors=colors['hot'], wid=0.1)],
-#         'layout': go.Layout(
-#             title='Post Scores in Past Three Days',
-#             barmode='stack',
-#             xaxis=dict(title='Hours Ago', range=[-3, 0]),
-#             yaxis=dict(title='Score')
-#         )}
-#     return figure
-
-if __name__ == '__main__':
-    # main()
-    app.run_server(host = '0.0.0.0', port = 8050, debug = True)
-
