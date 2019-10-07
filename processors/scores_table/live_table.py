@@ -40,11 +40,18 @@ class LiveTable:
         self.topic_partition = None
         self.__seek_to_window_start() #initializes time_window_start, time_window_start_epoch, and topic_partition
         self.posts = {}
-        self.bulk_consume_events()
+        self.__bulk_consume_new_events()
 
     def update(self):
+        """
+        Plays updates to the table from kafka topic.
+        Purges table entries that are past their expiration date.
+        Enriches all entries by applying scoring function
+
+        :return:
+        """
         self.__garbage_collect_old()
-        self.bulk_consume_events()
+        self.__bulk_consume_new_events()
         self.__apply_score()
 
     def get_snapshot(self):
@@ -56,7 +63,8 @@ class LiveTable:
 
     def update_scoring_function(self, scoring_function: ScoringFunction):
         """
-        Updates scoring function for this table. Reapplies function to all rows.
+        Updates scoring function for this table.
+        Applies scoring function on all current entries in table
 
         :param scoring_function:
         :return:
@@ -65,12 +73,15 @@ class LiveTable:
         self.__apply_score()
 
     def __apply_score(self):
+        """
+        Applies scoring function on all entries in table
+        """
         for key, json_dict in self.posts.items():
             json_dict['score'] = self.scoring_function.score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
             json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEW'])
             json_dict['hotness_score'] = self.scoring_function.hotness_score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
 
-    def bulk_consume_events(self):
+    def __bulk_consume_new_events(self):
         """
         Reads kafka topic as an event source to reconstitute a "snapshot" of
         scores for all posts by replaying them into a dictionary.
@@ -85,8 +96,8 @@ class LiveTable:
 
     def __garbage_collect_old(self):
         """
-        Removes all tracked posts
-        :return:
+        Removes all expired table entries
+
         """
         for post_id in list(self.posts.keys()):
             if self.posts[post_id]['POST_TIMESTAMP'] < self.time_window_start_epoch:
@@ -114,7 +125,6 @@ class LiveTable:
     def __update_time_window_start(self):
         """
         Returns start of time window from now - self.time_window_size.
-
         """
         self.time_window_start = datetime.datetime.now() - self.time_window_size
         self.time_window_start_epoch = int(self.time_window_start.timestamp() * 1000)
