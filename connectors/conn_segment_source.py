@@ -23,6 +23,7 @@ RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
 def hello():
     return "<h1 style='color:blue'>This server is a connector from Segment to Kafka!</h1>" 
 
+
 def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
     """
     casts segment string timestamp to unix millis timestamp that Kafka supports
@@ -32,6 +33,7 @@ def segment_timestamp_to_unix_millis(segment_timestamp_str: str):
     epoch = datetime.datetime.utcfromtimestamp(0)
     segment_timestamp_datetime = datetime.datetime.strptime(segment_timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
     return int((segment_timestamp_datetime - epoch).total_seconds() * 1000)
+
 
 class SegmentSourceConnector(Resource):
     """
