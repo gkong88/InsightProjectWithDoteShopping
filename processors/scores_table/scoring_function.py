@@ -40,3 +40,16 @@ class ScoringFunction:
     def coldness_score(self, previews):
         coldness_weight = 1 - 1 / (1 + math.exp( -self.cold_threshold_steepness * (previews - self.min_previews_threshold)))
         return coldness_weight * self.max_coldness_score
+
+    def get_config(self):
+        """
+
+        :return: dictionary of parameters for this function.
+        """
+        return {'max_coldness_score': self.max_coldness_score,
+                'min_previews_threshold': self.min_previews_threshold,
+                'cold_threshold_steepness': self.cold_threshold_steepness,
+                 'max_hotness_score': self.max_hotness_score,
+                'ctr_hotness_threshold': self.ctr_hotness_threshold,
+                'hot_threshold_steepness': self.hot_threshold_steepness,
+                 'score_offset': self.hot_threshold_steepness}
