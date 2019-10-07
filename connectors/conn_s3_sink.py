@@ -6,7 +6,7 @@ from pytz import timezone
 import time
 import os, sys
 sys.path.insert(0, os.path.abspath('../util'))
-from utility import RepeatPeriodically, heartbeat
+from utility import RepeatPeriodically, heartbeat, get_latest_message
 from typing import Sequence
 
 
@@ -21,16 +21,12 @@ class S3SinkConnector:
                  log_topic_name: str,
                  min_push_interval: datetime.timedelta):
         # cast sequence to list, if not already list. precondition of KafkaConsumer
+        self.input_topic_name
         bootstrap_servers = list(bootstrap_servers)
-        self.consumer = KafkaConsumer(bootstrap_servers=bootstrap_servers,
-                                      auto_offset_reset='latest',
-                                      enable_auto_commit=True,
-                                      value_deserializer=lambda x: json.loads(x.decode('utf-8')))
-        # get partition no. assuming only one, per precondition
-        partition_number = list(self.consumer.partitions_for_topic(input_topic_name))[0]
-        self.topic_partition = TopicPartition(input_topic_name, partition_number)
-        self.consumer.assign([self.topic_partition])
-
+        self.consumer_config = {'bootstrap_servers': bootstrap_servers,
+                                'auto_offset_reset': 'latest',
+                                'enable_auto_commit': True,
+                                'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
         self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
                                       value_serializer=lambda x: json.dumps(x).encode('utf-8'))
         self.log_topic_name = log_topic_name
@@ -41,7 +37,7 @@ class S3SinkConnector:
     def run_forever(self):
         while True:
             # poll kafka topic until consumer partition is automatically generated
-            message = self.__get_latest_message()
+            message = get_latest_message(self.input_topic_name, self.consumer_config)
             if message is None:
                 continue
 
@@ -80,31 +76,12 @@ class S3SinkConnector:
     def __log_push_to_s3(self, filename):
         self.producer.send(topic=self.log_topic_name, value={'filename': filename})
 
-    def __get_latest_message(self):
-        """
-
-        :return: latest message from topic
-
-        returns None on failure.
-        """
-        # poll until new data is added to topic
-        while self.consumer.end_offsets([self.topic_partition])[self.topic_partition] == \
-                self.consumer.position(self.topic_partition):
-            print("waiting for new messages...")
-            time.sleep(3) #seconds
-        self.consumer.seek(self.topic_partition, self.consumer.end_offsets([self.topic_partition])[self.topic_partition] - 1)
-        try:
-            return self.consumer.poll(timeout_ms = 5000, max_records = 1)[self.topic_partition][0]
-        except:
-            print('failed to get next message')
-            return None
-
 
 if __name__ == "__main__":
     input_topic_name = 'recent_posts_scores_snapshot'
     bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
-                     'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
-                     'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+                         'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                         'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
     s3_bucket_path = 's3://dote-fit-scores/calculated_score_2/'
     log_topic_name = 'connector_s3_sink_push_log'
     min_push_interval = datetime.timedelta(minutes=2)
