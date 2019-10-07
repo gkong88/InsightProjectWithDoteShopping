@@ -53,4 +53,4 @@ class ScoringFunction:
                  'max_hotness_score': self.max_hotness_score,
                 'ctr_hotness_threshold': self.ctr_hotness_threshold,
                 'hot_threshold_steepness': self.hot_threshold_steepness,
-                 'score_offset': self.hot_threshold_steepness}
+                 'score_offset': self.score_offset}
