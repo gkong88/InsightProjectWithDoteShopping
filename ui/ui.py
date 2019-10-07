@@ -99,13 +99,15 @@ def update_graph_live(n):
     max_ts = max(df.POST_TIMESTAMP)
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
     figure = {
-        'data': [{'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.025,
+        'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.025,
+                  'marker_color': colors['cold']},
+                 {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.025,
                   'marker_color': colors['hot'],
                   'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
-                                %(post_id, previews, full_views, full_views/max(previews,1))
-                                for post_id, previews, full_views in zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]},
-                 {'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.025,
-                  'marker_color': colors['cold']}],
+                               % (post_id, previews, full_views, full_views / max(previews, 1))
+                               for post_id, previews, full_views in
+                               zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]}
+    ],
         'layout': {'title': 'Post Scores. Last Updates: %s'%str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
                    'barmode': 'stack',
                    'xaxis': {'title': 'Hours Ago', 'range': [-6, 0]},
