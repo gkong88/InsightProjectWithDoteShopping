@@ -1,4 +1,4 @@
-from kafka import KafkaProducer
+from kafka import KafkaProducer, KafkaConsumer, TopicPartition
 from typing import Callable
 import threading
 import time
@@ -37,3 +37,25 @@ def heartbeat(bootstrap_servers, topic_name):
     p.send(topic=topic_name, key=b'ping')
     p.flush()
     p.close()
+
+
+def get_latest_message(input_topic_name: str, config: dict):
+    """
+
+    :param input_topic_name:
+        REQUIRES only one partition for global ordering
+    :return:
+    """
+    # create consumer for topic
+    consumer = KafkaConsumer(**config)
+    partition_number = list(consumer.partitions_for_topic(input_topic_name))[0]
+    topic_partition = TopicPartition(input_topic_name, partition_number)
+    consumer.assign([topic_partition])
+
+    # get latest message
+    consumer.seek(topic_partition, consumer.end_offsets([topic_partition])[topic_partition] - 1)
+    message = consumer.poll(3000, 1)[topic_partition][0]
+
+    # close connection and return result
+    consumer.close()
+    return message
