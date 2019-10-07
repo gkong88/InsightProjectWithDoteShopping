@@ -6,9 +6,9 @@ class ScoringFunction:
     This class is used to construct a parameterizable function that returns
     a score based on previews and full_views.
     """
-    def __init__(self, max_coldness_score=40, min_previews_threshold=30, cold_threshold_steepness=0.35,
-                 max_hotness_score=60, ctr_hotness_threshold=0.15, hot_threshold_steepness=13,
-                 score_offset = -50):
+    def __init__(self, max_coldness_score=50, min_previews_threshold=20, cold_threshold_steepness=0.1,
+                 max_hotness_score=50, ctr_hotness_threshold=0.15, hot_threshold_steepness=13,
+                 score_offset = -30):
         """
 
         :param max_coldness_score: max points possible for cold_start posts
@@ -35,7 +35,6 @@ class ScoringFunction:
         else:
             click_thru_rate = full_views / max(previews, full_views)
         # max fn guards against edge case of out of ordering of preview and view event delivery
-
         hotness_weight = 1.0 / (1.0 + math.exp(-self.hot_threshold_steepness * (click_thru_rate - self.ctr_hotness_threshold)))
         return hotness_weight * self.max_hotness_score
 
