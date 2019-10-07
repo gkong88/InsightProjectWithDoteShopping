@@ -1,4 +1,4 @@
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 import json
 from scoring_function import ScoringFunction
 from live_table import LiveTable
@@ -18,27 +18,32 @@ class Reporter:
     """
     # Concurrency is managed with monitor pattern (locking) on methods that
     # access the table state.
-    def __init__(self, topic_name: str, kafka_servers: str,
+    def __init__(self, topic_name: str, bootstrap_servers: str,
                  output_topic_name: str, kafka_rest_proxy_server: str,
-                 scoring_function: ScoringFunction = ScoringFunction(),
-                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds = 1)
+                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds=1),
+                 scoring_function_config: dict = ScoringFunction().get_config()
                  ):
+        # init lock for coordinating update and push events.
+        self.lock = threading.Lock()
+        self.threads = []
+
+        # init producer for publishing scoring function state to UI
+        self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
+                                      value_serializer=lambda x: json.dumps(x).encode('utf-8'))
         # init kafka consumer
-        consumer = KafkaConsumer(topic_name,
-                                 bootstrap_servers=kafka_servers,
-                                 auto_offset_reset='earliest',
-                                 enable_auto_commit=True,
-                                 value_deserializer=lambda x: json.loads(x.decode('utf-8')))
+        self.consumer = KafkaConsumer(topic_name,
+                                      bootstrap_servers=bootstrap_servers,
+                                      auto_offset_reset='earliest',
+                                      enable_auto_commit=True,
+                                      value_deserializer=lambda x: json.loads(x.decode('utf-8')))
         # init live table
-        self.table = LiveTable(consumer, datetime.timedelta(days = 1), scoring_function)
+        self.table = LiveTable(self.consumer, datetime.timedelta(days = 1))
+        # apply scoring function, publish message containing these configs (for ui)
+        self.update_scoring_function(scoring_function_config)
 
         # store timing variables
         self.min_push_interval = min_push_interval
         self.next_push_timestamp = datetime.datetime(1970, 1, 1)
-
-        # init lock for coordinating update and push events.
-        self.lock = threading.Lock()
-        self.threads = []
 
         self.destination_url = kafka_rest_proxy_server + "/topics/" + output_topic_name
         self.headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json",
@@ -57,10 +62,16 @@ class Reporter:
         for thread in self.threads:
             thread.start()
 
-    def update_scoring_function(self):
-        # TODO: add functionality to incorporate function updates
+    def update_scoring_function(self, scoring_function_config: dict):
         # TODO: add listener for function updates that calls this
-        pass
+        self.lock.acquire()
+        scoring_function = ScoringFunction(**scoring_function_config)
+        self.table.update_scoring_function(scoring_function)
+        producer = KafkaProducer(bootstrap_servers=self.bootstrap_servers,
+                                 value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+        producer.send(topic = 'scores_config', key ='register', value=scoring_function_config)
+        producer.close()
+        self.lock.release()
 
     def update_table_forever(self):
         """
@@ -106,7 +117,7 @@ if __name__ == "__main__":
     RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
 
     reporter = Reporter(topic_name = input_topic_name,
-                        kafka_servers = kafka_servers,
+                        bootstrap_servers= kafka_servers,
                         output_topic_name = output_topic_name,
                         kafka_rest_proxy_server = kafka_rest_proxy_server)
     reporter.run()
