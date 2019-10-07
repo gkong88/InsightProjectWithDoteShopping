@@ -21,7 +21,7 @@ class S3SinkConnector:
                  log_topic_name: str,
                  min_push_interval: datetime.timedelta):
         # cast sequence to list, if not already list. precondition of KafkaConsumer
-        self.input_topic_name
+        self.input_topic_name = input_topic_name
         bootstrap_servers = list(bootstrap_servers)
         self.consumer_config = {'bootstrap_servers': bootstrap_servers,
                                 'auto_offset_reset': 'latest',
