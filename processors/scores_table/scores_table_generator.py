@@ -119,7 +119,7 @@ class Reporter:
         while True:
             time.sleep(self.listen_period_s)
             msg = get_latest_message(input_topic_name=self.scoring_fn_config_topic)
-            if msg.key != 'register':
+            if msg is not None and msg.key != 'register':
                 self.lock.acquire()
                 self.update_scoring_function(msg.value)
                 self.lock.release()
