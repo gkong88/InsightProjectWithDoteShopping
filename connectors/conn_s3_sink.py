@@ -43,7 +43,7 @@ class S3SinkConnector:
 
             # push latest scores to s3, log this push
             last_push_filename, last_push_timestamp = self.__push_to_s3(message)
-            self.__log_push_to_s3(message, last_push_filename)
+            self.__log_push_to_s3(last_push_filename)
 
             # wait until the next push interval
             next_push_timestamp = last_push_timestamp + self.min_push_interval
