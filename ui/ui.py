@@ -58,7 +58,7 @@ heartbeat_config = {'bootstrap_servers': bootstrap_servers,
 report_topic_name = 'recent_posts_scores_snapshot'
 heartbeat_topic_name_sink = 'heartbeat_conn_s3_sink'
 heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
-heartbeat_topic_name_processor = 'heartbeat_table_generator'
+heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
 message = get_latest_message(report_topic_name, report_config)
@@ -154,6 +154,45 @@ def heartbeat_source(n):
         color = colors['dead']
         value = False
     return label, color, value
+
+@app.callback([Output('heartbeat-table-generator', 'label'), Output('heartbeat-table-generator', 'color'), Output('heartbeat-table-generator', 'value')],
+              [Input('interval-heartbeat', 'n_intervals')])
+def heartbeat_table_generator(n):
+    #TODO: make dry with other heartbeats
+    last_heartbeat_timestamp_s = get_latest_message(heartbeat_topic_name_table_generator, heartbeat_config).timestamp / 1000
+    last_heartbeat_date = datetime.datetime.fromtimestamp(last_heartbeat_timestamp_s, timezone('US/Pacific'))
+    now_s = round(time.time())
+    time_since_heartbeat_s = now_s - last_heartbeat_timestamp_s
+    label = "Table Generator Status - Last Heartbeat Timestamp: %s - Minutes Ago: %s"%(str(last_heartbeat_date), str(round(time_since_heartbeat_s/60)))
+    if (time_since_heartbeat_s) <= 5 * 60:
+        # heard from within 5 minutes. all is well
+        color = colors['alive']
+        value = True
+    else:
+        # haven't heard from in 5 minutes. pronounced dead.
+        color = colors['dead']
+        value = False
+    return label, color, value
+
+@app.callback([Output('heartbeat-sink', 'label'), Output('heartbeat-sink', 'color'), Output('heartbeat-sink', 'value')],
+              [Input('interval-heartbeat', 'n_intervals')])
+def heartbeat_sink(n):
+    #TODO: make dry with other heartbeats
+    last_heartbeat_timestamp_s = get_latest_message(heartbeat_topic_name_sink, heartbeat_config).timestamp / 1000
+    last_heartbeat_date = datetime.datetime.fromtimestamp(last_heartbeat_timestamp_s, timezone('US/Pacific'))
+    now_s = round(time.time())
+    time_since_heartbeat_s = now_s - last_heartbeat_timestamp_s
+    label = "S3 Sink Connector Status - Last Heartbeat Timestamp: %s - Minutes Ago: %s"%(str(last_heartbeat_date), str(round(time_since_heartbeat_s/60)))
+    if (time_since_heartbeat_s) <= 5 * 60:
+        # heard from within 5 minutes. all is well
+        color = colors['alive']
+        value = True
+    else:
+        # haven't heard from in 5 minutes. pronounced dead.
+        color = colors['dead']
+        value = False
+    return label, color, value
+
 
 
 if __name__ == '__main__':
