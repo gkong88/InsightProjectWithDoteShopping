@@ -24,11 +24,12 @@ class Reporter:
                  output_topic_name: str,
                  min_push_interval: datetime.timedelta = datetime.timedelta(seconds=1),
                  scoring_function_config: dict = ScoringFunction().get_config(),
-                 scoring_fn_config_topic: str = 'scores_config'
+                 scores_config_running_topic_name: str = 'stores_config_running'
                  ):
         # cast bootstrap servers to list. needed for various fn preconditions
         self.bootstrap_servers = list(bootstrap_servers)
-        self.scoring_fn_config_topic = scoring_fn_config_topic
+        self.scores_config_running_topic_name = scores_config_running_topic_name
+
         # init lock for coordinating update and push events.
         self.lock = threading.Lock()
         self.threads = []
@@ -75,7 +76,7 @@ class Reporter:
         self.lock.acquire()
         scoring_function = ScoringFunction(**scoring_function_config)
         self.table.update_scoring_function(scoring_function)
-        self.producer.send(topic=self.scoring_fn_config_topic, key='register', value=scoring_function_config)
+        self.producer.send(topic=self.scores_config_running_topic_name, value=scoring_function_config)
         self.producer.flush()
         self.lock.release()
 
