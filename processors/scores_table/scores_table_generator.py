@@ -23,10 +23,12 @@ class Reporter:
     def __init__(self, input_topic_name: str, bootstrap_servers: Sequence[str],
                  output_topic_name: str,
                  min_push_interval: datetime.timedelta = datetime.timedelta(seconds=1),
-                 scoring_function_config: dict = ScoringFunction().get_config()
+                 scoring_function_config: dict = ScoringFunction().get_config(),
+                 scoring_fn_config_topic: str = 'scores_config'
                  ):
         # cast bootstrap servers to list. needed for various fn preconditions
         self.bootstrap_servers = list(bootstrap_servers)
+        self.scoring_fn_config_topic = scoring_fn_config_topic
         # init lock for coordinating update and push events.
         self.lock = threading.Lock()
         self.threads = []
@@ -45,7 +47,6 @@ class Reporter:
         self.min_push_interval = min_push_interval
         self.next_push_timestamp = datetime.datetime(1970, 1, 1)
 
-        self.scoring_fn_config_topic = 'scores_config'
         self.listen_period_s = 3
 
     def run(self):
