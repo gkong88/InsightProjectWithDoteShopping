@@ -78,6 +78,10 @@ app.layout = html.Div([
     dcc.Graph(
         id='bar_graph'
     ),
+    dash_table.DataTable(
+        id='top-n-table',
+        columns=[{"name": i, "id": i} for i in df.columns],
+    ),
     daq.Indicator(
         id='heartbeat-source'
     ),
@@ -87,7 +91,9 @@ app.layout = html.Div([
     daq.Indicator(
         id='heartbeat-sink'
     ),
-
+    dcc.Graph(
+        id='s3-push-history-graph'
+    ),
     dcc.Interval(
         id='interval-graph',
         interval=1 * 1000,  # in milliseconds
@@ -100,8 +106,6 @@ app.layout = html.Div([
     )
 
 ])
-
-
 
 
 @app.callback(Output('bar_graph', 'figure'),
@@ -128,6 +132,18 @@ def update_graph_live(n):
     }
     return figure
 
+@app.callback(Output('top-n-table', 'data'),
+              [Input('interval-graph', 'n_intervals')])
+def update_table(n):
+    #TODO: dry with update graph
+    message = get_latest_message(report_topic_name, report_config)
+    df = pd.read_json(json.dumps(message.value), orient='index')
+    df = df.nlargest(20, 'score')
+    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
+    max_ts = max(df.POST_TIMESTAMP)
+    df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
+    return df.to_dict('records')
+
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
 def heartbeat_source(n):
@@ -136,7 +152,7 @@ def heartbeat_source(n):
     now_s = round(time.time())
     time_since_heartbeat_s = now_s - last_heartbeat_timestamp_s
     label = "Source Connector Status - Last Heartbeat Timestamp: %s - Minutes Ago: %s"%(str(last_heartbeat_date), str(round(time_since_heartbeat_s/60)))
-    if (time_since_heartbeat_s) <= 5 * 60:
+    if time_since_heartbeat_s <= 5 * 60:
         # heard from within 5 minutes. all is well
         color = colors['alive']
         value = True
@@ -183,6 +199,33 @@ def heartbeat_sink(n):
         color = colors['dead']
         value = False
     return label, color, value
+
+@app.callback(Output('s3-push-history-graph', 'figure'),
+              [Input('interval-heartbeat', 'n_intervals')])
+def s3_push_history(n):
+    message = get_latest_message(s3_topic_name, report_config)
+    df = pd.read_json(json.dumps(message.value), orient='index')
+    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
+    max_ts = max(df.POST_TIMESTAMP)
+    df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
+    figure = {
+        'data': [{'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.025,
+                  'marker_color': colors['hot'],
+                  'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
+                                % (post_id, previews, full_views, full_views / max(previews, 1))
+                                for post_id, previews, full_views in
+                                zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]},
+                 {'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.025,
+                  'marker_color': colors['cold']}],
+        'layout': {
+            'title': 'Post Scores. Last Updates: %s' % str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
+            'barmode': 'stack',
+            'xaxis': {'title': 'Hours Ago', 'range': [-6, 0]},
+            'yaxis': {'title': 'Score'}
+            }
+    }
+    return figure
+
 
 
 
