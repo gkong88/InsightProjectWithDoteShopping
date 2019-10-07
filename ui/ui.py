@@ -40,7 +40,7 @@ colors = {
     'background': '#111111',
     'text': '#7FDBFF',
     'cold': '#00ffff',
-    'hot:': '#ff3300'
+    'hot': '#ff3300'
 }
 
 bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
