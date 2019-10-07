@@ -40,7 +40,9 @@ colors = {
     'background': '#111111',
     'text': '#7FDBFF',
     'cold': '#00ffff',
-    'hot': '#ff3300'
+    'hot': '#ff3300',
+    'dead': '#FF0000',
+    'alive': '#00FF30'
 }
 
 bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
@@ -51,7 +53,10 @@ default_config = {'bootstrap_servers': bootstrap_servers,
                   'enable_auto_commit': True,
                   'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
 report_topic_name = 'recent_posts_scores_snapshot'
-log_topic_name = 'pipeline_logs'
+heartbeat_topic_name_sink = 'heartbeat_conn_s3_sink'
+heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
+heartbeat_topic_name_processor = 'heartbeat_table_generator'
+s3_topic_name = 'connector_s3_sink_push_log'
 
 message = get_latest_message(report_topic_name)
 df = pd.read_json(json.dumps(message.value), orient='index')
@@ -79,6 +84,16 @@ app.layout = html.Div([
         #                }
         # }
     ),
+    daq.Indicator(
+        id='heartbeat-source'
+    ),
+    daq.Indicator(
+        id='heartbeat-table-generator'
+    ),
+    daq.Indicator(
+        id='heartbeat-sink'
+    ),
+
     dcc.Interval(
         id='interval-graph',
         interval=1 * 1000,  # in milliseconds
@@ -86,7 +101,7 @@ app.layout = html.Div([
     ),
     dcc.Interval(
         id='interval-heart-beat',
-        interval=30 * 1000,  # in milliseconds
+        interval=60 * 1000,  # in milliseconds
         n_intervals=0
     )
 
@@ -119,9 +134,23 @@ def update_graph_live(n):
     }
     return figure
 
-@app.callback(Output('bar_graph', 'figure'),
+@app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
-def heartbeat(n):
+def heartbeat_source(n):
+    last_heartbeat_timestamp_ms = get_latest_message(heartbeat_topic_name_source).timestamp
+    last_heartbeat_date = datetime.datetime.fromtimestamp(last_heartbeat_timestamp_ms / 1000, timezone('US/Pacific'))
+    now_ms = round(time.time() * 1000)
+    label = "Last Heartbeat: %s"%str(last_heartbeat_date)
+    if (now_ms - last_heartbeat_timestamp_ms) <= 1000 * 5 * 60:
+        # heard from within 5 minutes. all is well
+        color = colors['alive']
+        value = True
+    else:
+        # haven't heard from in 5 minutes. pronounced dead.
+        color = colors['dead']
+        value = False
+    return label, color, value
+
 
 if __name__ == '__main__':
     # main()
