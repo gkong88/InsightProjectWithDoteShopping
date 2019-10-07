@@ -1,7 +1,7 @@
 from kafka import KafkaProducer, KafkaConsumer, TopicPartition
 from typing import Callable
 import threading
-import time
+import json
 
 
 class RepeatPeriodically:
@@ -39,11 +39,18 @@ def heartbeat(bootstrap_servers, topic_name):
     p.close()
 
 
-def get_latest_message(input_topic_name: str, config: dict):
+def get_latest_message(input_topic_name: str,
+                       config: dict = {'bootstrap_servers': ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
+                                                             'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                                                             'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'],
+                                       'auto_offset_reset': 'earliest',
+                                       'enable_auto_commit': True,
+                                       'value_deserializer':  lambda x: json.loads(x.decode('utf-8'))}):
     """
 
-    :param input_topic_name:
+    :param input_topic_name: Kafka topic name to read from
         REQUIRES only one partition for global ordering
+    :param config: KafkaConsumer configs
     :return:
     """
     # create consumer for topic
