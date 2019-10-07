@@ -146,18 +146,19 @@ class Reporter:
 
 
 if __name__ == "__main__":
-    input_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
+    # init heartbeat log for this process
     bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                          'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                          'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
-    output_topic_name = "recent_posts_scores_snapshot"
-
     heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'heartbeat_table_generator'}
     RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
 
-    reporter = Reporter(input_table_updates_topic_name=input_topic_name,
+    # init reporter and run
+    input_table_updates_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
+    output_snapshot_topic_name = "recent_posts_scores_snapshot"
+    reporter = Reporter(input_table_updates_topic_name=input_table_updates_topic_name,
                         bootstrap_servers=bootstrap_servers,
-                        output_snapshot_topic_name=output_topic_name)
+                        output_snapshot_topic_name=output_snapshot_topic_name)
     reporter.run()
 
 
