@@ -109,7 +109,7 @@ if __name__ == "__main__":
     log_topic_name = 'connector_s3_sink_push_log'
     min_push_interval = datetime.timedelta(minutes=2)
 
-    heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'pipeline_logs', 'key': 'conn_s3_sink'}
+    heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'heartbeat_conn_s3_sink', 'key': 'conn_s3_sink'}
     RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
 
     sink = S3SinkConnector(input_topic_name = input_topic_name,
