@@ -44,7 +44,7 @@ def get_latest_message(input_topic_name: str,
                                                              'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                                                              'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'],
                                        'auto_offset_reset': 'earliest',
-                                       'enable_auto_commit': True,
+                                       'enable_auto_commit': False,
                                        'value_deserializer':  lambda x: json.loads(x.decode('utf-8'))}):
     """
 
@@ -60,9 +60,12 @@ def get_latest_message(input_topic_name: str,
     consumer.assign([topic_partition])
 
     # get latest message
-    consumer.seek(topic_partition, consumer.end_offsets([topic_partition])[topic_partition] - 1)
-    message = consumer.poll(3000, 1)[topic_partition][0]
-
+    offset = consumer.end_offsets([topic_partition])[topic_partition] - 1
+    if offset >= 0:
+        consumer.seek(topic_partition, offset)
+        message = consumer.poll(timeout_ms=3000, max_records=1)[topic_partition][0]
+    else:
+        message = None
     # close connection and return result
     consumer.close()
     return message
