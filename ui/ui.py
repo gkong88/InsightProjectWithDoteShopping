@@ -13,7 +13,7 @@ import datetime
 from pytz import timezone
 
 
-def get_latest_message(input_topic_name: str):
+def get_latest_message(input_topic_name: str, config: dict):
     """
 
     :param input_topic_name:
@@ -21,7 +21,7 @@ def get_latest_message(input_topic_name: str):
     :return:
     """
     # create consumer for topic
-    consumer = KafkaConsumer(**default_config)
+    consumer = KafkaConsumer(**config)
     partition_number = list(consumer.partitions_for_topic(input_topic_name))[0]
     topic_partition = TopicPartition(input_topic_name, partition_number)
     consumer.assign([topic_partition])
@@ -48,17 +48,20 @@ colors = {
 bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
-default_config = {'bootstrap_servers': bootstrap_servers,
+report_config = {'bootstrap_servers': bootstrap_servers,
                   'auto_offset_reset': 'latest',
                   'enable_auto_commit': True,
                   'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
+heartbeat_config = {'bootstrap_servers': bootstrap_servers,
+                    'auto_offset_reset': 'latest', 
+                    'enable_auto_commit': True}
 report_topic_name = 'recent_posts_scores_snapshot'
 heartbeat_topic_name_sink = 'heartbeat_conn_s3_sink'
 heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
 heartbeat_topic_name_processor = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
-message = get_latest_message(report_topic_name)
+message = get_latest_message(report_topic_name, report_config)
 df = pd.read_json(json.dumps(message.value), orient='index')
 df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
 max_ts = max(df.POST_TIMESTAMP)
@@ -100,7 +103,7 @@ app.layout = html.Div([
         n_intervals=0
     ),
     dcc.Interval(
-        id='interval-heart-beat',
+        id='interval-heartbeat',
         interval=60 * 1000,  # in milliseconds
         n_intervals=0
     )
@@ -113,7 +116,7 @@ app.layout = html.Div([
 @app.callback(Output('bar_graph', 'figure'),
               [Input('interval-graph', 'n_intervals')])
 def update_graph_live(n):
-    message = get_latest_message(report_topic_name)
+    message = get_latest_message(report_topic_name, report_config)
     df = pd.read_json(json.dumps(message.value), orient='index')
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
     max_ts = max(df.POST_TIMESTAMP)
@@ -137,11 +140,12 @@ def update_graph_live(n):
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
 def heartbeat_source(n):
-    last_heartbeat_timestamp_ms = get_latest_message(heartbeat_topic_name_source).timestamp
-    last_heartbeat_date = datetime.datetime.fromtimestamp(last_heartbeat_timestamp_ms / 1000, timezone('US/Pacific'))
-    now_ms = round(time.time() * 1000)
-    label = "Last Heartbeat: %s"%str(last_heartbeat_date)
-    if (now_ms - last_heartbeat_timestamp_ms) <= 1000 * 5 * 60:
+    last_heartbeat_timestamp_s = get_latest_message(heartbeat_topic_name_source, heartbeat_config).timestamp / 1000
+    last_heartbeat_date = datetime.datetime.fromtimestamp(last_heartbeat_timestamp_s, timezone('US/Pacific'))
+    now_s = round(time.time())
+    time_since_heartbeat_s = now_s - last_heartbeat_timestamp_s
+    label = "Source Connector Status - Last Heartbeat Timestamp: %s - Minutes Ago: %s"%(str(last_heartbeat_date), str(round(time_since_heartbeat_s/60)))
+    if (time_since_heartbeat_s) <= 5 * 60:
         # heard from within 5 minutes. all is well
         color = colors['alive']
         value = True
