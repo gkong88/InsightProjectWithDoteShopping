@@ -92,7 +92,7 @@ class S3SinkConnector:
                 self.consumer.position(self.topic_partition):
             print("waiting for new messages...")
             time.sleep(3) #seconds
-        self.consumer.seek(self.topic_partition, self.consumer.highwater(self.topic_partition) - 1)
+        self.consumer.seek(self.topic_partition, self.consumer.end_offsets([self.topic_partition])[self.topic_partition] - 1)
         try:
             return self.consumer.poll(timeout_ms = 5000, max_records = 1)[self.topic_partition][0]
         except:
