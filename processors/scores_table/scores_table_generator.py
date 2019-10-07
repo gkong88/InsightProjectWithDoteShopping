@@ -103,7 +103,7 @@ if __name__ == "__main__":
     kafka_rest_proxy_server = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082"
 
     heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name': 'heartbeat_table_generator', 'key': 'table_generator'}
-    RepeatPeriodically(fn=heartbeat, interval=300, kwargs=heartbeat_kwargs).run()
+    RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
 
     reporter = Reporter(topic_name = input_topic_name,
                         kafka_servers = kafka_servers,
