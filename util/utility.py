@@ -24,15 +24,16 @@ class RepeatPeriodically:
         threading.Timer(self.interval, self.run).start()
 
 
-def heartbeat(bootstrap_servers, topic_name, key):
+def heartbeat(bootstrap_servers, topic_name):
     """
     Sends a heartbeat to a kafka topic.
     Used for logging
 
     :param bootstrap_servers: addresses of kafka bootstrap servers
-    :param key: kafka event key
     :param topic_name:
     :return:
     """
     p = KafkaProducer(bootstrap_servers=bootstrap_servers)
-    p.send(topic=topic_name, timestamp_ms=int(time.time() * 1000), key=key)
+    p.send(topic=topic_name, key=b'ping')
+    p.flush()
+    p.close()
