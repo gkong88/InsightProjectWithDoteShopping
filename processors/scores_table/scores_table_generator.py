@@ -66,9 +66,6 @@ class Reporter:
         # apply scoring function, publish message containing these configs (for ui)
         self.__update_scoring_function(scoring_function_config)
 
-
-
-
     def run(self):
         """
         Starts processors.
@@ -139,7 +136,7 @@ class Reporter:
         # guarantees mutual exclusion over methods that USE the scoring function.
         self.lock.acquire()
         scoring_function = ScoringFunction(**scoring_function_config)
-        self.table.__update_scoring_function(scoring_function)
+        self.table.update_scoring_function(scoring_function)
         self.producer.send(topic=self.scores_config_running_topic_name, value=scoring_function_config)
         self.producer.flush()
         self.lock.release()
