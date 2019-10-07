@@ -128,8 +128,8 @@ class Reporter:
 if __name__ == "__main__":
     input_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
     bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
-                     'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
-                     'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+                         'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                         'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
     output_topic_name = "recent_posts_scores_snapshot"
 
     heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'heartbeat_table_generator'}
