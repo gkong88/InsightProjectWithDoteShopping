@@ -46,7 +46,6 @@ class Reporter:
         # store timing variables
         self.min_push_interval = min_push_interval
         self.next_push_timestamp = datetime.datetime(1970, 1, 1)
-
         self.listen_period_s = 3
 
     def run(self):
@@ -107,12 +106,7 @@ class Reporter:
             while datetime.datetime.now() < self.next_push_timestamp:
                 sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 1)
                 time.sleep(sleep_duration)
-
-            kafka_payload = {"records": [{"value": posts}]}
-            response = requests.post(self.destination_url, json=kafka_payload, headers=self.headers)
-            response.raise_for_status()
-            response.close()
-            self.producer.send(self.topic)
+            self.producer.send(topic=self.topic, value=posts)
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
             print('pushed')
 
@@ -123,7 +117,7 @@ class Reporter:
         When a new message is recieved, locks instance state and applies update.
         """
         while True:
-            time.sleep(self.listen_period)
+            time.sleep(self.listen_period_s)
             msg = get_latest_message(input_topic_name=self.scoring_fn_config_topic)
             if msg.key != 'register':
                 self.lock.acquire()
