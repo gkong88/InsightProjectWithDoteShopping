@@ -33,8 +33,8 @@ def heartbeat(bootstrap_servers, topic_name):
     :param topic_name:
     :return:
     """
-    p = KafkaProducer(bootstrap_servers=bootstrap_servers)
-    p.send(topic=topic_name, key=b'ping')
+    p = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+    p.send(topic=topic_name, value={})
     p.flush()
     p.close()
 
