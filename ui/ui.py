@@ -69,18 +69,17 @@ app.layout = html.Div([
     ),
     dcc.Graph(
         id='my-graph',
-        figure=go.Figure(
-            data=[
-                go.Bar(
-                    x=df['tsnorm'],
-                    y=df['coldness_score'],
-                    name='cold',
-                    width=0.1,
-                    #color=colors['cold']
-                )
-            ]
-        )
-    ),
+        figure={
+            'data': [{'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'cold', 'width': 0.05, 'marker_color': colors['hot']},
+                     {'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'cold', 'width': 0.05, 'marker_color': colors['cold']}],
+            'layout': {'title': 'Post Scores',
+                       'barmode': 'stack',
+                       'xaxis': {'title': 'Hours Ago', 'range': [-3, 0]},
+                       'yaxis': {'title': 'Score'}
+                       }
+        }
+    )
+# ,
     # html.Div(
     #     [
     #     # html.Label('Exploit vs Explore'),
