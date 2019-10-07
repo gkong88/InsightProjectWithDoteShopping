@@ -2,6 +2,8 @@ import pandas as pd
 from kafka import KafkaConsumer
 from scoring_function import ScoringFunction
 import datetime
+from typing import Sequence
+import json
 
 
 class LiveTable:
@@ -15,10 +17,22 @@ class LiveTable:
     A user defined function can be supplied/updated that uses attributes
     of the post to create a new, derived column.
     """
-    def __init__(self, consumer: KafkaConsumer,
+    def __init__(self, input_topic_name: str,
+                 bootstrap_servers: Sequence[str],
                  time_window_size=datetime.timedelta(days=3),
                  scoring_function=ScoringFunction()):
-        self.consumer = consumer
+        """
+
+        :param input_topic_name:
+        :param bootstrap_servers:
+        :param time_window_size:
+        :param scoring_function:
+        """
+        self.consumer = KafkaConsumer(input_topic_name,
+                                      bootstrap_servers=list(bootstrap_servers),
+                                      auto_offset_reset='earliest',
+                                      enable_auto_commit=True,
+                                      value_deserializer=lambda x: json.loads(x.decode('utf-8')))
         self.scoring_function = scoring_function
         self.time_window_size = time_window_size
         self.time_window_start = None
