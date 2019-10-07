@@ -14,73 +14,78 @@ from typing import Sequence
 
 class Reporter:
     """
-    Generates reports to a topic for s3 and a topic for ui at user defined intervals.
+    Reporter has four functions.
 
-    Maintains a live table from updates with Kafka. Performs updates when no
+    1) Maintains dynamic table state based on table updates from Kafka Tables (KSQL).
+    2) Periodically pushes snapshots of the table to a Kafka topic.
+    3) Listens to a topic for config updates (scoring function) and applies them when necessary
     """
     # Concurrency is managed with monitor pattern (locking) on methods that
     # access the table state.
-    def __init__(self, input_topic_name: str, bootstrap_servers: Sequence[str],
-                 output_topic_name: str,
-                 min_push_interval: datetime.timedelta = datetime.timedelta(seconds=1),
+    def __init__(self,
+                 bootstrap_servers: Sequence[str],
+                 input_table_updates_topic_name: str,
+                 output_snapshot_topic_name: str,
+                 scores_config_running_topic_name: str = 'stores_config_running',
+                 scores_config_update_topic_name: str = 'stores_config_update',
                  scoring_function_config: dict = ScoringFunction().get_config(),
-                 scores_config_running_topic_name: str = 'stores_config_running'
+                 interval_snapshot_s: int = 1,
+                 interval_listen_config_update_s: int = 3
                  ):
-        # cast bootstrap servers to list. needed for various fn preconditions
+        """
+        :param bootstrap_servers: bootstrap servers for kafka service discovery
+        :param input_table_updates_topic_name: kafka topic to listen for table updates (KSQL)
+        :param output_snapshot_topic_name: kafka topic to publish table snapshots
+        :param scores_config_running_topic_name: kafka topic to register scoring fn used (to ui)
+        :param scores_config_update_topic_name: kafka topic to listen for scoring fn changes (from ui)
+        :param scoring_function_config: initial scoring function to use for table
+        :param interval_snapshot_s: time interval to generate table snapshots
+        :param interval_listen_config_update_s: time interval to listen for config updates (from ui)
+        """
+        # cast bootstrap servers to list. needed for downstream func param preconditions
         self.bootstrap_servers = list(bootstrap_servers)
+        self.input_table_updates_topic_name = input_table_updates_topic_name
+        self.output_topic_name = output_snapshot_topic_name
         self.scores_config_running_topic_name = scores_config_running_topic_name
+        self.scores_config_update_topic_name = scores_config_update_topic_name
+
+        # store timing variables
+        self.min_push_interval = datetime.timedelta(seconds=interval_snapshot_s)
+        self.listen_period_s = interval_listen_config_update_s
+        self.next_push_timestamp = datetime.datetime(1970, 1, 1)
 
         # init lock for coordinating update and push events.
         self.lock = threading.Lock()
         self.threads = []
 
-        # init producer for publishing scoring function state to UI
-        self.output_topic_name = output_topic_name
+        # init producer for publishing snapshots
         self.producer = KafkaProducer(bootstrap_servers=self.bootstrap_servers,
                                       value_serializer=lambda x: json.dumps(x).encode('utf-8'))
-
-        # init live table
-        self.table = LiveTable(input_topic_name, self.bootstrap_servers, datetime.timedelta(days=1))
+        # init live table to hold dynamic state
+        self.table = LiveTable(self.input_table_updates_topic_name, self.bootstrap_servers, datetime.timedelta(days=1))
         # apply scoring function, publish message containing these configs (for ui)
-        self.update_scoring_function(scoring_function_config)
+        self.__update_scoring_function(scoring_function_config)
 
-        # store timing variables
-        self.min_push_interval = min_push_interval
-        self.next_push_timestamp = datetime.datetime(1970, 1, 1)
-        self.listen_period_s = 3
+
+
 
     def run(self):
         """
         Starts processors.
         """
         # updates are always "enqueued"
-        self.threads.append(threading.Thread(target=self.update_table_forever))
+        self.threads.append(threading.Thread(target=self.__run_table_update_forever))
         # snapshots are "enqueued" periodically.
         # uses lock management to guarantee it only needs to wait
         # at most 1 update cycle before pushing
-        self.threads.append(threading.Thread(target=self.push_snapshot_forever))
+        self.threads.append(threading.Thread(target=self.__run_push_snapshot_forever))
         # listens for config changes. if an update appears in config change topic
         # locks the state of this instance and updates the scoring function.
-        self.threads.append(threading.Thread(target=self.listen_for_config_changes_forever))
+        self.threads.append(threading.Thread(target=self.__run_listen_for_config_changes_forever))
         for thread in self.threads:
             thread.start()
 
-    def update_scoring_function(self, scoring_function_config: dict):
-        """
-        Updates config file.
-        Publishes event that function has been updated.
-
-        :param scoring_function_config: ScoringFunction config
-        :return:
-        """
-        self.lock.acquire()
-        scoring_function = ScoringFunction(**scoring_function_config)
-        self.table.update_scoring_function(scoring_function)
-        self.producer.send(topic=self.scores_config_running_topic_name, value=scoring_function_config)
-        self.producer.flush()
-        self.lock.release()
-
-    def update_table_forever(self):
+    def __run_table_update_forever(self):
         """
         Update table when no reports are scheduled.
         Bottomfeeder that is always active.
@@ -95,7 +100,7 @@ class Reporter:
             self.lock.release()
             print('updated')
 
-    def push_snapshot_forever(self):
+    def __run_push_snapshot_forever(self):
         """
         Periodically publishes snapshot of table to kafka topic
         """
@@ -111,7 +116,7 @@ class Reporter:
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
             print('pushed')
 
-    def listen_for_config_changes_forever(self):
+    def __run_listen_for_config_changes_forever(self):
         """
         Polls for config update messages.
 
@@ -119,9 +124,25 @@ class Reporter:
         """
         while True:
             time.sleep(self.listen_period_s)
-            msg = get_latest_message(input_topic_name=self.scoring_fn_config_topic)
-            if msg is not None and msg.key != 'register':
-                self.update_scoring_function(msg.value)
+            msg = get_latest_message(input_topic_name=self.scores_config_update_topic_name)
+            if msg is not None:
+                self.__update_scoring_function(msg.value)
+
+    def __update_scoring_function(self, scoring_function_config: dict):
+        """
+        Updates config file.
+        Publishes event that function has been updated.
+
+        :param scoring_function_config: ScoringFunction config
+        :return:
+        """
+        # guarantees mutual exclusion over methods that USE the scoring function.
+        self.lock.acquire()
+        scoring_function = ScoringFunction(**scoring_function_config)
+        self.table.__update_scoring_function(scoring_function)
+        self.producer.send(topic=self.scores_config_running_topic_name, value=scoring_function_config)
+        self.producer.flush()
+        self.lock.release()
 
 
 if __name__ == "__main__":
@@ -134,9 +155,9 @@ if __name__ == "__main__":
     heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'heartbeat_table_generator'}
     RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
 
-    reporter = Reporter(input_topic_name= input_topic_name,
-                        bootstrap_servers= bootstrap_servers,
-                        output_topic_name = output_topic_name)
+    reporter = Reporter(input_table_updates_topic_name=input_topic_name,
+                        bootstrap_servers=bootstrap_servers,
+                        output_snapshot_topic_name=output_topic_name)
     reporter.run()
 
 
