@@ -31,9 +31,11 @@ class ScoringFunction:
 
     def hotness_score(self, previews, full_views):
         if previews + full_views == 0:
-            return 0
+            click_thru_rate = 0
+        else:
+            click_thru_rate = full_views / max(previews, full_views)
         # max fn guards against edge case of out of ordering of preview and view event delivery
-        click_thru_rate = full_views / max(previews, full_views)
+
         hotness_weight = 1.0 / (1.0 + math.exp(-self.hot_threshold_steepness * (click_thru_rate - self.ctr_hotness_threshold)))
         return hotness_weight * self.max_hotness_score
 
