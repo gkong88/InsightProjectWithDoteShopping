@@ -60,6 +60,9 @@ app.layout = html.Div([
     dcc.Graph(
         id='bar_graph'
     ),
+dcc.Graph(
+        id='bar_graph2'
+    ),
     dash_table.DataTable(
         id='top-n-table',
         columns=[{"name": i, "id": i} for i in df.columns],
@@ -76,6 +79,9 @@ app.layout = html.Div([
     dcc.Graph(
         id='s3-push-history-graph'
     ),
+    daq.StopButton(
+      id='my-daq-stopbutton'
+    ),
     dcc.Interval(
         id='interval-graph',
         interval=1 * 1000,  # in milliseconds
@@ -83,14 +89,14 @@ app.layout = html.Div([
     ),
     dcc.Interval(
         id='interval-heartbeat',
-        interval=60 * 1000,  # in milliseconds
+        interval=300 * 1000,  # in milliseconds
         n_intervals=0
     )
 
 ])
 
 
-@app.callback(Output('bar_graph', 'figure'),
+@app.callback([Output('bar_graph', 'figure'), Output('bar_graph2', 'figure')],
               [Input('interval-graph', 'n_intervals')])
 def update_graph_live(n):
     message = get_latest_message(report_topic_name, report_config)
@@ -98,10 +104,10 @@ def update_graph_live(n):
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
     max_ts = max(df.POST_TIMESTAMP)
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
-    figure = {
-        'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.025,
+    figure1 = {
+        'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.02,
                   'marker_color': colors['cold']},
-                 {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.025,
+                 {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.02,
                   'marker_color': colors['hot'],
                   'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
                                % (post_id, previews, full_views, full_views / max(previews, 1))
@@ -110,11 +116,29 @@ def update_graph_live(n):
     ],
         'layout': {'title': 'Post Scores. Last Updates: %s'%str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
                    'barmode': 'stack',
-                   'xaxis': {'title': 'Hours Ago', 'range': [-6, 0]},
+                   'xaxis': {'title': 'Hours Ago', 'range': [-2, 0]},
                    'yaxis': {'title': 'Score'}
                    }
     }
-    return figure
+
+    figure2 = {
+        'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.04,
+                  'marker_color': colors['cold']},
+                 {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.04,
+                  'marker_color': colors['hot'],
+                  'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
+                                % (post_id, previews, full_views, full_views / max(previews, 1))
+                                for post_id, previews, full_views in
+                                zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]}
+                 ],
+        'layout': {
+            'title': 'Post Scores. Last Updates: %s' % str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
+            'barmode': 'stack',
+            'xaxis': {'title': 'Hours Ago', 'range': [-24, 0]},
+            'yaxis': {'title': 'Score'}
+            }
+    }
+    return figure1, figure2
 
 @app.callback(Output('top-n-table', 'data'),
               [Input('interval-graph', 'n_intervals')])
@@ -127,6 +151,7 @@ def update_table(n):
     max_ts = max(df.POST_TIMESTAMP)
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
     return df.to_dict('records')
+
 
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
@@ -145,6 +170,7 @@ def heartbeat_source(n):
         color = colors['dead']
         value = False
     return label, color, value
+
 
 @app.callback([Output('heartbeat-table-generator', 'label'), Output('heartbeat-table-generator', 'color'), Output('heartbeat-table-generator', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
@@ -165,6 +191,7 @@ def heartbeat_table_generator(n):
         value = False
     return label, color, value
 
+
 @app.callback([Output('heartbeat-sink', 'label'), Output('heartbeat-sink', 'color'), Output('heartbeat-sink', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
 def heartbeat_sink(n):
@@ -184,33 +211,71 @@ def heartbeat_sink(n):
         value = False
     return label, color, value
 
+
 @app.callback(Output('s3-push-history-graph', 'figure'),
               [Input('interval-heartbeat', 'n_intervals')])
-def s3_push_history(n):
-    message = get_latest_message(s3_topic_name, report_config)
-    df = pd.read_json(json.dumps(message.value), orient='index')
-    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
-    max_ts = max(df.POST_TIMESTAMP)
-    df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
+def service_uptime(n):
+    bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
+                         'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                         'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+
+    c = KafkaConsumer(bootstrap_servers=bootstrap_servers,
+                      value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+                      auto_offset_reset='earliest',
+                      enable_auto_commit=False)
+
+    tp = TopicPartition('connector_s3_sink_push_log', 0)
+    c.assign([tp])
+
+    # get latest message
+    offset = c.end_offsets([tp])[tp] - 1
+    end_offset = c.end_offsets([tp])[tp] - 1
+    # downtime is defined as no s3 push within last 5 minutes.
+    push_interval_SLA_limit_ms = 1000 * 60 * 5
+    last_timestamp_epoch_ms = 9999999999999
+
+    records = []
+    total_downtime_ms = 0
+    ## check for downtime between pushes
+    for m in c:
+        if m is None or m.offset >= end_offset:
+            # all data read
+            break
+        # does time between pushes exceed limit?
+        if m.timestamp - last_timestamp_epoch_ms > push_interval_SLA_limit_ms:
+            # add points on graph that mark service as down between these two points
+            records.append({'ts': last_timestamp_epoch_ms + 1, 'up_flag': 0, 's3_filename': ''})
+            records.append({'ts': m.timestamp - 1, 'up_flag': 0, 's3_filename': ''})
+            total_downtime_ms += m.timestamp - last_timestamp_epoch_ms
+        records.append({'ts': m.timestamp, 'up_flag': 1, 's3_filename': m.value})
+        last_timestamp_epoch_ms = m.timestamp
+    ## also check for downtime from last push to now
+    now = round(time.time() * 1000)
+    if now - last_timestamp_epoch_ms > last_timestamp_epoch_ms:
+        records.append({'ts': last_timestamp_epoch_ms + 1, 'up_flag': 0, 's3_filename': ''})
+        records.append({'ts': now, 'up_flag': 0, 's3_filename': ''})
+        total_downtime_ms += m.timestamp - last_timestamp_epoch_ms
+    else:
+        records.append({'ts': now, 'up_flag': 1, 's3_filename': ''})
+
+    # enrich with a datetime column
+    df = pd.read_json(records)
+    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.ts]
+
+    total_time_ms = df.max['ts'] - df.min['ts']
+    service_uptime_rate = total_downtime_ms / total_time_ms
+
     figure = {
-        'data': [{'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.025,
-                  'marker_color': colors['hot'],
-                  'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
-                                % (post_id, previews, full_views, full_views / max(previews, 1))
-                                for post_id, previews, full_views in
-                                zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]},
-                 {'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.025,
-                  'marker_color': colors['cold']}],
+        'data': [{'x': df['date'], 'y': df['up_flag'], 'type': 'line'}],
         'layout': {
-            'title': 'Post Scores. Last Updates: %s' % str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
-            'barmode': 'stack',
-            'xaxis': {'title': 'Hours Ago', 'range': [-6, 0]},
-            'yaxis': {'title': 'Score'}
+            'title': 'Uptime Graph. Uptime over last %s Hours: %s'%(round(total_time_ms/1000/60/60),
+                                                                    round(service_uptime_rate*100, 3)),
+            'xaxis': {'title': 'date'},
+            'yaxis': {'title': 'up'},
+            'hovertext': df['s3_filename']
             }
     }
     return figure
-
-
 
 
 if __name__ == '__main__':
