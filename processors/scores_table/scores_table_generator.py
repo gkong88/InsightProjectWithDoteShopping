@@ -26,8 +26,8 @@ class Reporter:
                  bootstrap_servers: Sequence[str],
                  input_table_updates_topic_name: str,
                  output_snapshot_topic_name: str,
-                 scores_config_running_topic_name: str = 'stores_config_running',
-                 scores_config_update_topic_name: str = 'stores_config_update',
+                 scores_config_running_topic_name: str = 'scores_config_running',
+                 scores_config_update_topic_name: str = 'scores_config_update',
                  scoring_function_config: dict = ScoringFunction().get_config(),
                  interval_snapshot_s: int = 1,
                  interval_listen_config_update_s: int = 3
