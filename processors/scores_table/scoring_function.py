@@ -8,7 +8,7 @@ class ScoringFunction:
     """
     def __init__(self, max_coldness_score=50, min_previews_threshold=20, cold_threshold_steepness=0.1,
                  max_hotness_score=50, ctr_hotness_threshold=0.15, hot_threshold_steepness=13,
-                 score_offset = -30):
+                 score_offset=-30):
         """
 
         :param max_coldness_score: max points possible for cold_start posts
@@ -50,7 +50,7 @@ class ScoringFunction:
         return {'max_coldness_score': self.max_coldness_score,
                 'min_previews_threshold': self.min_previews_threshold,
                 'cold_threshold_steepness': self.cold_threshold_steepness,
-                 'max_hotness_score': self.max_hotness_score,
+                'max_hotness_score': self.max_hotness_score,
                 'ctr_hotness_threshold': self.ctr_hotness_threshold,
                 'hot_threshold_steepness': self.hot_threshold_steepness,
-                 'score_offset': self.score_offset}
+                'score_offset': self.score_offset}
