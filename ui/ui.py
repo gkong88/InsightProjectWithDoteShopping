@@ -80,6 +80,7 @@ app.layout = html.Div([
         dcc.Input(id="password", type="text", value="Enter Password"),
         html.Button(id='submit-button', n_clicks=0, children='Submit To Pipeline'),
         html.Div(id="output-state"),
+        html.Img(                                                                                                                                   src='https://github.com/gkong88/InsightProjectWithDoteShopping/blob/master/imgs/scoring_function_graph.PNG?raw=true'                    ),
     ]),
     html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
     html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
