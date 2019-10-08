@@ -60,12 +60,8 @@ app.layout = html.Div([
     dcc.Graph(
         id='bar_graph'
     ),
-dcc.Graph(
+    dcc.Graph(
         id='bar_graph2'
-    ),
-    dash_table.DataTable(
-        id='top-n-table',
-        columns=[{"name": i, "id": i} for i in df.columns],
     ),
     daq.Indicator(
         id='heartbeat-source'
@@ -91,8 +87,11 @@ dcc.Graph(
         id='interval-heartbeat',
         interval=300 * 1000,  # in milliseconds
         n_intervals=0
+    ),
+    dash_table.DataTable(
+        id='top-n-table',
+        columns=[{"name": i, "id": i} for i in df.columns],
     )
-
 ])
 
 
@@ -259,7 +258,7 @@ def service_uptime(n):
         records.append({'ts': now, 'up_flag': 1, 's3_filename': ''})
 
     # enrich with a datetime column
-    df = pd.read_json(records)
+    df = pd.io.json.json_normalize(records)
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.ts]
 
     total_time_ms = df.max['ts'] - df.min['ts']
