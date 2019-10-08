@@ -31,9 +31,9 @@ bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                      'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
 report_config = {'bootstrap_servers': bootstrap_servers,
-                  'auto_offset_reset': 'latest',
-                  'enable_auto_commit': True,
-                  'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
+                 'auto_offset_reset': 'latest',
+                 'enable_auto_commit': True,
+                 'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
 heartbeat_config = {'bootstrap_servers': bootstrap_servers,
                     'auto_offset_reset': 'latest', 
                     'enable_auto_commit': True}
@@ -42,6 +42,8 @@ heartbeat_topic_name_sink = 'heartbeat_conn_s3_sink'
 heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
 heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
+
+current_scoring_function_kwargs = get_latest_message('scores_config_running')
 
 app.layout = html.Div([
     html.H1(
@@ -182,7 +184,7 @@ def heartbeat_sink(n):
     now_s = round(time.time())
     time_since_heartbeat_s = now_s - last_heartbeat_timestamp_s
     label = "S3 Sink Connector Status - Last Heartbeat Timestamp: %s - Minutes Ago: %s"%(str(last_heartbeat_date), str(round(time_since_heartbeat_s/60)))
-    if (time_since_heartbeat_s) <= 5 * 60:
+    if time_since_heartbeat_s <= 5 * 60:
         # heard from within 5 minutes. all is well
         color = colors['alive']
         value = True
