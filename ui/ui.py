@@ -261,14 +261,13 @@ def service_uptime(n):
     df = pd.io.json.json_normalize(records)
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.ts]
 
-    total_time_ms = df.max['ts'] - df.min['ts']
-    service_uptime_rate = total_downtime_ms / total_time_ms
+    total_time_ms = df['ts'].max() - df['ts'].min()
+    service_uptime_rate_percent = (1 - total_downtime_ms / total_time_ms) * 100
 
     figure = {
         'data': [{'x': df['date'], 'y': df['up_flag'], 'type': 'line'}],
         'layout': {
-            'title': 'Uptime Graph. Uptime over last %s Hours: %s'%(round(total_time_ms/1000/60/60),
-                                                                    round(service_uptime_rate*100, 3)),
+            'title': 'Uptime Graph. Uptime over last %s Hours: %s%%'%(round(total_time_ms/1000/60/60), round(service_uptime_rate_percent, 3)),
             'xaxis': {'title': 'date'},
             'yaxis': {'title': 'up'},
             'hovertext': df['s3_filename']
