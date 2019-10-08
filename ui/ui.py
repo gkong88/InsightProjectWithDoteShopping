@@ -5,7 +5,7 @@ import dash_daq as daq
 import dash_table
 import pandas as pd
 import plotly.graph_objs as go
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 import sys, os
 sys.path.insert(0, os.path.abspath('../util'))
@@ -43,7 +43,7 @@ heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
 heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
-current_scoring_function_kwargs = get_latest_message('scores_config_running')
+current_scoring_fn_kwargs = get_latest_message('scores_config_running').value
 
 app.layout = html.Div([
     html.H1(
@@ -60,6 +60,19 @@ app.layout = html.Div([
         id='bar_graph2'
     ),
     html.H1(children='Control Center', style={'textAlign':'center', 'colors':colors['text']}),
+    html.Div(
+    [
+        dcc.Input(id="cold_max_score", type="number", value=current_scoring_fn_kwargs['max_coldness_score']),
+        dcc.Input(id="cold_threshold_previews", type="number", value=current_scoring_fn_kwargs['min_previews_threshold']),
+        dcc.Input(id="cold_threshold_steepness", type="number", value=current_scoring_fn_kwargs['cold_threshold_steepness']),
+        dcc.Input(id="hot_max_score", type="number", value=current_scoring_fn_kwargs['max_hotness_score']),
+        dcc.Input(id="hot_threshold_ctr", type="number", value=current_scoring_fn_kwargs['ctr_hotness_threshold']),
+        dcc.Input(id="hot_threshold_steepness", type="number", value=current_scoring_fn_kwargs['hot_threshold_steepness']),
+        dcc.Input(id="total_score_offset", type="number", value=current_scoring_fn_kwargs['score_offset']),
+        dcc.Input(id="password", type="text", value="Enter Password"),
+        html.Button(id='submit-button', n_clicks=0, children='Submit To Pipeline'),
+        html.Div(id="output-state"),
+    ]),
     html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
     html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
     daq.Indicator(
@@ -135,6 +148,17 @@ def update_graph_live(n):
     }
     return figure1, figure2
 
+
+@app.callback(Output('output-state', 'children'),
+              [Input('submit-button', 'n_clicks')],
+              [State('input-1-state', 'value'),
+               State('input-2-state', 'value')])
+def update_output(n_clicks, input1, input2):
+    return u'''
+        The Button has been pressed {} times,
+        Input 1 is "{}",
+        and Input 2 is "{}"
+    '''.format(n_clicks, input1, input2)
 
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
@@ -257,6 +281,47 @@ def service_uptime(n):
             }
     }
     return figure
+
+
+@app.callback(Output('output-state', 'children'),
+              [Input('submit-button', 'n_clicks')],
+              [State('cold_max_score', 'value'),
+               State('cold_threshold_previews', 'value'),
+               State('cold_threshold_steepness', 'value'),
+               State('hot_max_score', 'value'),
+               State('hot_threshold_ctr', 'value'),
+               State('hot_threshold_steepness', 'value'),
+               State('total_score_offset', 'value')])
+def update_output(n_clicks, password,
+                  cold_max_score, cold_threshold_previews, cold_threshold_steepness,
+                  hot_max_score, hot_threshold_ctr, hot_threshold_steepness,
+                  total_score_offset):
+    if password != 'password':
+        return u'Password is incorrect!'
+    try:
+        input_scoring_fn_kwargs = {}
+        input_scoring_fn_kwargs['max_coldness_score'] = cold_max_score
+        input_scoring_fn_kwargs['min_previews_threshold'] = cold_threshold_previews
+        input_scoring_fn_kwargs['cold_threshold_steepness'] = cold_threshold_steepness
+        input_scoring_fn_kwargs['max_hotness_score'] = hot_max_score
+        input_scoring_fn_kwargs['ctr_hotness_threshold'] = hot_threshold_ctr
+        input_scoring_fn_kwargs['hot_threshold_steepness'] = hot_threshold_steepness
+        input_scoring_fn_kwargs['score_offset'] = total_score_offset
+        p = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+        p.send(topic='scores_config_update', value=input_scoring_fn_kwargs)
+        p.flush()
+        p.close()
+        return u'Config change accepted! Sent to pipeline.'
+    except:
+        return u'Inputs invalid. Please check inputs and try again'
+
+
+
+    return u'''
+        The Button has been pressed {} times,
+        Input 1 is "{}",
+        and Input 2 is "{}"
+    '''.format(n_clicks, input1, input2)
 
 
 if __name__ == '__main__':
