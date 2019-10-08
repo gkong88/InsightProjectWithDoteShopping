@@ -18,6 +18,7 @@ from pytz import timezone
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
+flask_app = app.server
 colors = {
     'background': '#111111',
     'text': '#7FDBFF',
@@ -326,7 +327,7 @@ def update_output(n_clicks,
 
 if __name__ == '__main__':
     # main()
-    app.run_server(host = '0.0.0.0', port = 8050, debug = True)
+    app.run_server(host = '0.0.0.0', port = 80, debug = True)
 
 
 # @app.callback(
