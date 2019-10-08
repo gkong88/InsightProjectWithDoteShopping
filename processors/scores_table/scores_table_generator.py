@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     # init reporter and run
     input_table_updates_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
-    output_snapshot_topic_name = "recent_posts_scores_snapshot"
+    output_snapshot_topic_name = "recent_posts_scores_snapshot_prod"
     reporter = Reporter(input_table_updates_topic_name=input_table_updates_topic_name,
                         bootstrap_servers=bootstrap_servers,
                         output_snapshot_topic_name=output_snapshot_topic_name)
