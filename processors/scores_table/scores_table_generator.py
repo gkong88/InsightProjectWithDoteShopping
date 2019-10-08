@@ -1,10 +1,9 @@
-from kafka import KafkaConsumer, KafkaProducer
+from kafka import KafkaProducer
 import json
 from scoring_function import ScoringFunction
 from live_table import LiveTable
 import datetime
 import threading
-import requests
 import time
 import os, sys
 sys.path.insert(0, os.path.abspath('../../util'))
@@ -26,8 +25,8 @@ class Reporter:
                  bootstrap_servers: Sequence[str],
                  input_table_updates_topic_name: str,
                  output_snapshot_topic_name: str,
-                 scores_config_running_topic_name: str = 'scores_config_running',
-                 scores_config_update_topic_name: str = 'scores_config_update',
+                 scores_config_running_topic_name: str = 'scores_config_running_prod',
+                 scores_config_update_topic_name: str = 'scores_config_update_prod',
                  scoring_function_config: dict = ScoringFunction().get_config(),
                  interval_snapshot_s: int = 1,
                  interval_listen_config_update_s: int = 1
@@ -152,7 +151,7 @@ if __name__ == "__main__":
 
     # init reporter and run
     input_table_updates_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
-    output_snapshot_topic_name = "recent_posts_scores_snapshot"
+    output_snapshot_topic_name = "recent_posts_scores_snapshot_prod"
     reporter = Reporter(input_table_updates_topic_name=input_table_updates_topic_name,
                         bootstrap_servers=bootstrap_servers,
                         output_snapshot_topic_name=output_snapshot_topic_name)
