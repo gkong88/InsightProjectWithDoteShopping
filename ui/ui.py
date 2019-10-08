@@ -77,7 +77,7 @@ dcc.Graph(
         id='heartbeat-sink'
     ),
     dcc.Graph(
-        id='s3-push-history-graph'
+        id='s3-uptime-graph'
     ),
     daq.StopButton(
       id='my-daq-stopbutton'
@@ -212,7 +212,7 @@ def heartbeat_sink(n):
     return label, color, value
 
 
-@app.callback(Output('s3-push-history-graph', 'figure'),
+@app.callback(Output('s3-uptime-graph', 'figure'),
               [Input('interval-heartbeat', 'n_intervals')])
 def service_uptime(n):
     bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
