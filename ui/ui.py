@@ -43,12 +43,6 @@ heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
 heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
-message = get_latest_message(report_topic_name, report_config)
-df = pd.read_json(json.dumps(message.value), orient='index')
-df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
-max_ts = max(df.POST_TIMESTAMP)
-df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
-
 app.layout = html.Div([
     html.H1(
         children='Real-Time Scoring Dashboard',
@@ -63,6 +57,9 @@ app.layout = html.Div([
     dcc.Graph(
         id='bar_graph2'
     ),
+    html.H1(children='Control Center', style={'textAlign':'center', 'colors':colors['text']}),
+    html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
+    html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
     daq.Indicator(
         id='heartbeat-source'
     ),
@@ -72,6 +69,7 @@ app.layout = html.Div([
     daq.Indicator(
         id='heartbeat-sink'
     ),
+    html.H2(children='Uptime Graph', style={'textAlign':'center', 'colors':colors['text']}),
     dcc.Graph(
         id='s3-uptime-graph'
     ),
@@ -87,10 +85,6 @@ app.layout = html.Div([
         id='interval-heartbeat',
         interval=300 * 1000,  # in milliseconds
         n_intervals=0
-    ),
-    dash_table.DataTable(
-        id='top-n-table',
-        columns=[{"name": i, "id": i} for i in df.columns],
     )
 ])
 
@@ -138,18 +132,6 @@ def update_graph_live(n):
             }
     }
     return figure1, figure2
-
-@app.callback(Output('top-n-table', 'data'),
-              [Input('interval-graph', 'n_intervals')])
-def update_table(n):
-    #TODO: dry with update graph
-    message = get_latest_message(report_topic_name, report_config)
-    df = pd.read_json(json.dumps(message.value), orient='index')
-    df = df.nlargest(20, 'score')
-    df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
-    max_ts = max(df.POST_TIMESTAMP)
-    df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
-    return df.to_dict('records')
 
 
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
@@ -263,12 +245,10 @@ def service_uptime(n):
 
     total_time_ms = df['ts'].max() - df['ts'].min()
     service_uptime_rate_percent = (1 - total_downtime_ms / total_time_ms) * 100
-    print(df['s3_filename'])
-
     figure = {
             'data': [{'x': df['date'], 'y': df['up_flag'], 'text': df['s3_filename'], 'type': 'scatter'}],
             'layout': {
-                'title': 'Uptime Graph. Uptime over last %s Hours: %s%%'%(round(total_time_ms/1000/60/60), round(service_uptime_rate_percent, 3)),
+                'title': 'Uptime over last %s Hours: %s%%'%(round(total_time_ms/1000/60/60, 0), round(service_uptime_rate_percent, 3)),
                 'xaxis': {'title': 'Date'},
                 'yaxis': {'title': 'up'},
                 'hovermode': 'closest'
