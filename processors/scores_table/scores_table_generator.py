@@ -30,7 +30,7 @@ class Reporter:
                  scores_config_update_topic_name: str = 'scores_config_update',
                  scoring_function_config: dict = ScoringFunction().get_config(),
                  interval_snapshot_s: int = 1,
-                 interval_listen_config_update_s: int = 3
+                 interval_listen_config_update_s: int = 1
                  ):
         """
         :param bootstrap_servers: bootstrap servers for kafka service discovery
