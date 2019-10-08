@@ -1,10 +1,9 @@
-from kafka import KafkaConsumer, KafkaProducer
+from kafka import KafkaProducer
 import json
 from scoring_function import ScoringFunction
 from live_table import LiveTable
 import datetime
 import threading
-import requests
 import time
 import os, sys
 sys.path.insert(0, os.path.abspath('../../util'))
