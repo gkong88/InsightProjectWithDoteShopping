@@ -62,13 +62,21 @@ app.layout = html.Div([
     html.H1(children='Control Center', style={'textAlign':'center', 'colors':colors['text']}),
     html.Div(
     [
+        html.Label("Cold Max Score"),
         dcc.Input(id="cold_max_score", type="number", value=current_scoring_fn_kwargs['max_coldness_score']),
+        html.Label("Cold Threshold for Previews"),
         dcc.Input(id="cold_threshold_previews", type="number", value=current_scoring_fn_kwargs['min_previews_threshold']),
+        html.Label("Cold Threshold Steepness"),
         dcc.Input(id="cold_threshold_steepness", type="number", value=current_scoring_fn_kwargs['cold_threshold_steepness']),
+        html.Label("Hot Max Score"),
         dcc.Input(id="hot_max_score", type="number", value=current_scoring_fn_kwargs['max_hotness_score']),
+        html.Label("Hot Threshold for Click Thru Rate"),
         dcc.Input(id="hot_threshold_ctr", type="number", value=current_scoring_fn_kwargs['ctr_hotness_threshold']),
+        html.Label("Hot THreshold Steepness"),
         dcc.Input(id="hot_threshold_steepness", type="number", value=current_scoring_fn_kwargs['hot_threshold_steepness']),
+        html.Label("Total Score Offset"),
         dcc.Input(id="total_score_offset", type="number", value=current_scoring_fn_kwargs['score_offset']),
+        html.Label("Enter Password"),
         dcc.Input(id="password", type="text", value="Enter Password"),
         html.Button(id='submit-button', n_clicks=0, children='Submit To Pipeline'),
         html.Div(id="output-state"),
@@ -148,17 +156,6 @@ def update_graph_live(n):
     }
     return figure1, figure2
 
-
-@app.callback(Output('output-state', 'children'),
-              [Input('submit-button', 'n_clicks')],
-              [State('input-1-state', 'value'),
-               State('input-2-state', 'value')])
-def update_output(n_clicks, input1, input2):
-    return u'''
-        The Button has been pressed {} times,
-        Input 1 is "{}",
-        and Input 2 is "{}"
-    '''.format(n_clicks, input1, input2)
 
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
               [Input('interval-heartbeat', 'n_intervals')])
@@ -291,13 +288,14 @@ def service_uptime(n):
                State('hot_max_score', 'value'),
                State('hot_threshold_ctr', 'value'),
                State('hot_threshold_steepness', 'value'),
-               State('total_score_offset', 'value')])
-def update_output(n_clicks, password,
+               State('total_score_offset', 'value'),
+               State('password', 'value')])
+def update_output(n_clicks,
                   cold_max_score, cold_threshold_previews, cold_threshold_steepness,
                   hot_max_score, hot_threshold_ctr, hot_threshold_steepness,
-                  total_score_offset):
-    if password != 'password':
-        return u'Password is incorrect!'
+                  total_score_offset, password):
+    #if password != u'password':
+    #    return u'Password is incorrect!'
     try:
         input_scoring_fn_kwargs = {}
         input_scoring_fn_kwargs['max_coldness_score'] = cold_max_score
@@ -309,6 +307,7 @@ def update_output(n_clicks, password,
         input_scoring_fn_kwargs['score_offset'] = total_score_offset
         p = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda x: json.dumps(x).encode('utf-8'))
         p.send(topic='scores_config_update', value=input_scoring_fn_kwargs)
+        #p.send(topic='scores_config_update', value={'max_coldness_score': cold_max_score})
         p.flush()
         p.close()
         return u'Config change accepted! Sent to pipeline.'
