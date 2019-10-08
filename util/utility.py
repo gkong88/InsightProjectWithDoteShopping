@@ -60,7 +60,7 @@ def get_latest_message(input_topic_name: str,
         return None
     elif len(partitions_for_topic_set) > 1:
         assert(False, "Function precondition violated! Multiple partitions in this topic!")
-    partition_number = list()[0]
+    partition_number = list(partitions_for_topic_set)[0]
     topic_partition = TopicPartition(input_topic_name, partition_number)
     consumer.assign([topic_partition])
 
