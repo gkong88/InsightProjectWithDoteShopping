@@ -246,7 +246,7 @@ def service_uptime(n):
             records.append({'ts': last_timestamp_epoch_ms + 1, 'up_flag': 0, 's3_filename': ''})
             records.append({'ts': m.timestamp - 1, 'up_flag': 0, 's3_filename': ''})
             total_downtime_ms += m.timestamp - last_timestamp_epoch_ms
-        records.append({'ts': m.timestamp, 'up_flag': 1, 's3_filename': m.value})
+        records.append({'ts': m.timestamp, 'up_flag': 1, 's3_filename': m.value['filename']})
         last_timestamp_epoch_ms = m.timestamp
     ## also check for downtime from last push to now
     now = round(time.time() * 1000)
@@ -263,14 +263,15 @@ def service_uptime(n):
 
     total_time_ms = df['ts'].max() - df['ts'].min()
     service_uptime_rate_percent = (1 - total_downtime_ms / total_time_ms) * 100
+    print(df['s3_filename'])
 
     figure = {
-        'data': [{'x': df['date'], 'y': df['up_flag'], 'type': 'line'}],
-        'layout': {
-            'title': 'Uptime Graph. Uptime over last %s Hours: %s%%'%(round(total_time_ms/1000/60/60), round(service_uptime_rate_percent, 3)),
-            'xaxis': {'title': 'date'},
-            'yaxis': {'title': 'up'},
-            'hovertext': df['s3_filename']
+            'data': [{'x': df['date'], 'y': df['up_flag'], 'text': df['s3_filename'], 'type': 'scatter'}],
+            'layout': {
+                'title': 'Uptime Graph. Uptime over last %s Hours: %s%%'%(round(total_time_ms/1000/60/60), round(service_uptime_rate_percent, 3)),
+                'xaxis': {'title': 'Date'},
+                'yaxis': {'title': 'up'},
+                'hovermode': 'closest'
             }
     }
     return figure
