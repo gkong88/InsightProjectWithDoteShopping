@@ -81,7 +81,7 @@ app.layout = html.Div([
         dcc.Input(id="password", type="text", value="Enter Password"),
         html.Button(id='submit-button', n_clicks=0, children='Submit To Pipeline'),
         html.Div(id="output-state"),
-        html.Img(                                                                                                                                   src='https://github.com/gkong88/InsightProjectWithDoteShopping/blob/master/imgs/scoring_function_graph.PNG?raw=true'                    ),
+        html.Img(src='https://github.com/gkong88/InsightProjectWithDoteShopping/blob/master/imgs/scoring_function_graph.PNG?raw=true'),
     ]),
     html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
     html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
@@ -308,7 +308,7 @@ def update_output(n_clicks,
         input_scoring_fn_kwargs['hot_threshold_steepness'] = hot_threshold_steepness
         input_scoring_fn_kwargs['score_offset'] = total_score_offset
         p = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda x: json.dumps(x).encode('utf-8'))
-        p.send(topic='scores_config_supdate_prod', value=input_scoring_fn_kwargs)
+        p.send(topic='scores_config_update_prod', value=input_scoring_fn_kwargs)
         #p.send(topic='scores_config_update', value={'max_coldness_score': cold_max_score})
         p.flush()
         p.close()
