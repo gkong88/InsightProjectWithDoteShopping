@@ -1,7 +1,12 @@
-# InsightProjectWithDoteShopping
-Project for Dote Shopping
+# Million-Armed Bandit
 
-## Repo directory structure
+## Project Overview
+
+## Solution
+
+## Algorithm
+
+## Tech Stack
 
 The directory structure for your repo should look like this:
 
