@@ -39,6 +39,9 @@ Parameters of the scoring function are exposed through the UI (sigmoid steepness
 
 ## Deployment
 
+Components of the service should be installed in the order below. 
+Deployment instructions are in the README.md files located in the linked directories. 
+
 * Kafka Setup:
  
 * Connectors: Ingestion 
