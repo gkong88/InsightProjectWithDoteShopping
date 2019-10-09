@@ -64,6 +64,7 @@ class Reporter:
         self.table = LiveTable(self.input_table_updates_topic_name, self.bootstrap_servers, datetime.timedelta(days=1))
         # apply scoring function, publish message containing these configs (for ui)
         self.__update_scoring_function(scoring_function_config)
+        self.last_offset_scores_config_update = -1
 
     def run(self):
         """
@@ -121,8 +122,12 @@ class Reporter:
         while True:
             time.sleep(self.listen_period_s)
             msg = get_latest_message(input_topic_name=self.scores_config_update_topic_name)
-            if msg is not None:
+            if msg is not None and msg.offset is not self.last_offset_scores_config_update:
+                print("===================================")
+                print("Config change received: %s" % msg.value)
                 self.__update_scoring_function(msg.value)
+                print("Config change affected")
+                print("===================================")
 
     def __update_scoring_function(self, scoring_function_config: dict):
         """
