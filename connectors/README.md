@@ -20,7 +20,7 @@ pip3 install typing
 
 
 USAGE: 
-gunicorn --bind 0.0.0.0:5000 wsgi --daemon
+gunicorn --workers 4 --bind 0.0.0.0:5000 wsgi_conn_segment_source --daemon
 
 # allow for unlimited TCP connections.i
 ulimit -n 10240
