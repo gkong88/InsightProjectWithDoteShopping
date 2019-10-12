@@ -26,13 +26,23 @@ The score is broken into two components:
 * Coldness is inversely proportional with **previews** 
 * Hotness is proportional to **click thorugh rate** (clicks / previews) 
 
-Parameters of the scoring function are exposed through the UI (sigmoid steepness and thresholds, max cold score, max hot score). 
+Parameters of the scoring function are exposed, and configurable, through the UI (sigmoid steepness and thresholds, max cold score, max hot score). 
 
 ![Scoring_Algorithm](imgs/scoring_function_graph.PNG?raw=true "Scoring Algorithm")
 *Scoring Function* 
 
 
 ### Design
+
+Segment, a managed service for collecting customer interaction data, delivers relevant events as JSONs to a webserver that
+ingests the events into Kafka, the streaming platform. Relevant events are:
+
+* Post Creation
+* Post Preview
+* Post Click
+
+KSQL, which 
+ 
 
 ![data_pipeline](imgs/data_pipeline.PNG?raw=true "Data Pipeline")
 *Data Pipeline*
