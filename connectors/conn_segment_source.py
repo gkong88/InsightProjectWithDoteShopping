@@ -7,6 +7,7 @@ import datetime
 import requests
 import os, sys
 import resource
+from kafka import KafkaProducer
 sys.path.insert(0, os.path.abspath('../util'))
 from utility import RepeatPeriodically, heartbeat
 
@@ -14,10 +15,16 @@ from utility import RepeatPeriodically, heartbeat
 # Initialize central registry for your app
 application = Flask(__name__)
 api = Api(application)
-kafka_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092','ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092','ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
-heartbeat_kwargs = {'bootstrap_servers': kafka_servers, 'topic_name':'heartbeat_conn_segment_source'}
-RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
+bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092', 'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092', 'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
 
+# open up connection to kafka cluster
+p = KafkaProducer(bootstrap_servers=bootstrap_servers,
+                  key_serializer=lambda x: x.to_bytes(8, 'big'),
+                  value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+
+# spinoff thread that sends heartbeats
+heartbeat_kwargs = {'bootstrap_servers': bootstrap_servers, 'topic_name': 'heartbeat_conn_segment_source'}
+RepeatPeriodically(fn=heartbeat, interval=120, kwargs=heartbeat_kwargs).run()
 
 @application.route("/")
 def hello():
@@ -39,6 +46,15 @@ class SegmentSourceConnector(Resource):
     """
         REST API Sink for segment webhook that publishes data to kafka
     """
+    def __init__(self):
+        bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
+                             'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                             'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
+        # open up connection to kafka cluster
+        self.p = KafkaProducer(bootstrap_servers=bootstrap_servers,
+                          key_serializer=lambda x: x.to_bytes(8, 'big'),
+                          value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+
     def get(self):
         return "this is an endpoint for segment"
 
@@ -55,7 +71,7 @@ class SegmentSourceConnector(Resource):
         elif str(json_object.get("event")) in ['Assigned AB Test Shard']:
             return json_object["userId"]
         else:
-            return -1
+            return 0
 
     def post(self):
         """
@@ -65,23 +81,19 @@ class SegmentSourceConnector(Resource):
         """
         # flatten json so nested attributes can be used in KSQL analysis
         flat_json_object = flatten_json.flatten(json.loads(request.data))
+
         # extract timestamp and add it to json
         segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
         flat_json_object["segment_timestamp"] = segment_timestamp
-        # extract key to mark kafka event
-        key = self.get_key(flat_json_object)
-        # package data in Kafka REST API format
-        kafka_payload_data = {"records": [{"value": flat_json_object, "key": key}]}
-        # create topic name based on event attribute of incoming data
+
+        # determine topic to send event
         topic = ''.join(c for c in str(flat_json_object.get("type") + flat_json_object.get("event")) if
                         c.isalnum()) + "_00_raw_flatJSON"
-        # encode topic name that event should goto as a URI on top of URL
-        destination_url = "http://ec2-52-36-231-83.us-west-2.compute.amazonaws.com:8082/topics/" + topic
-        headers = {"Content-Type": "application/vnd.kafka.json.v2+json", "Accept": "application/vnd.kafka.v2+json", "Connection":'close'}
-        response = requests.post(destination_url, json=kafka_payload_data, headers=headers)
-        return_code = response.text
-        response.close()
-        return return_code
+
+        # extract key, if there is a registered attribute that should serve as key for this event
+        key = self.get_key(flat_json_object)
+        self.p.send(topic = topic, key = key, value = flat_json_object)
+        return 200
 
 
 api.add_resource(SegmentSourceConnector, '/publishToKafka')
