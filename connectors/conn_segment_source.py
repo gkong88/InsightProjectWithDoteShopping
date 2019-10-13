@@ -19,7 +19,6 @@ bootstrap_servers = ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092', '
 
 # open up connection to kafka cluster
 p = KafkaProducer(bootstrap_servers=bootstrap_servers,
-                  key_serializer=lambda x: x.to_bytes(8, 'big'),
                   value_serializer=lambda x: json.dumps(x).encode('utf-8'))
 
 # spinoff thread that sends heartbeats
@@ -52,7 +51,7 @@ class SegmentSourceConnector(Resource):
                              'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092']
         # open up connection to kafka cluster
         self.p = KafkaProducer(bootstrap_servers=bootstrap_servers,
-                          key_serializer=lambda x: x.to_bytes(8, 'big'),
+#                          key_serializer=lambda x: x.to_bytes(8, 'big'),
                           value_serializer=lambda x: json.dumps(x).encode('utf-8'))
 
     def get(self):
@@ -92,7 +91,7 @@ class SegmentSourceConnector(Resource):
 
         # extract key, if there is a registered attribute that should serve as key for this event
         key = self.get_key(flat_json_object)
-        self.p.send(topic = topic, key = key, value = flat_json_object)
+        self.p.send(topic = topic, key = str(key).encode('utf-8'), value = flat_json_object)
         return 200
 
 
