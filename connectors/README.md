@@ -21,6 +21,8 @@ haproxy:     https://www.digitalocean.com/community/tutorials/how-to-use-haproxy
 
 USAGE: 
 gunicorn --workers 4 --bind 0.0.0.0:5000 wsgi_conn_segment_source --daemon
+sudo haproxy -db -f /etc/haproxy/haproxy.cfg
+
 
 # S3
 
