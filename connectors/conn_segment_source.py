@@ -1,10 +1,8 @@
-from gevent.pywsgi import WSGIServer
 from flask import Flask, request
 import json
 from flask_restful import Resource, Api
 import flatten_json
 import datetime
-import requests
 import os, sys
 import resource
 from kafka import KafkaProducer
