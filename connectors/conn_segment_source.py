@@ -86,10 +86,11 @@ class SegmentSourceConnector(Resource):
         # determine topic to send event
         topic = ''.join(c for c in str(flat_json_object.get("type") + flat_json_object.get("event")) if
                         c.isalnum()) + "_00_raw_flatJSON"
-
+        print(topic)
         # extract key, if there is a registered attribute that should serve as key for this event
         key = self.get_key(flat_json_object)
         self.p.send(topic = topic, key = str(key).encode('utf-8'), value = flat_json_object)
+        self.p.flush()
         return 200
 
 
