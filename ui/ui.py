@@ -20,10 +20,10 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets = external_stylesheets)
 flask_app = app.server
 colors = {
-    'background': '#111111',
+    'background': '#212121',
     'text': '#7FDBFF',
-    'cold': '#00ffff',
-    'hot': '#ff3300',
+    'cold': '#7c7ce0',
+    'hot': '#db4437',
     'dead': '#FF0000',
     'alive': '#00FF30'
 }
@@ -44,7 +44,7 @@ heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
 heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
-current_scoring_fn_kwargs = get_latest_message('scores_config_running_prod').value
+current_scoring_fn_kwargs = get_latest_message('scores_config_running').value
 
 app.layout = html.Div([
     html.H1(
@@ -57,31 +57,43 @@ app.layout = html.Div([
     dcc.Graph(
         id='bar_graph'
     ),
-    dcc.Graph(
-        id='bar_graph2'
-    ),
+
     html.H1(children='Control Center', style={'textAlign':'center', 'colors':colors['text']}),
     html.Div(
     [
-        html.Label("Cold Max Score"),
-        dcc.Input(id="cold_max_score", type="number", value=current_scoring_fn_kwargs['max_coldness_score']),
-        html.Label("Cold Threshold for Previews"),
-        dcc.Input(id="cold_threshold_previews", type="number", value=current_scoring_fn_kwargs['min_previews_threshold']),
-        html.Label("Cold Threshold Steepness"),
-        dcc.Input(id="cold_threshold_steepness", type="number", value=current_scoring_fn_kwargs['cold_threshold_steepness']),
-        html.Label("Hot Max Score"),
-        dcc.Input(id="hot_max_score", type="number", value=current_scoring_fn_kwargs['max_hotness_score']),
-        html.Label("Hot Threshold for Click Thru Rate"),
-        dcc.Input(id="hot_threshold_ctr", type="number", value=current_scoring_fn_kwargs['ctr_hotness_threshold']),
-        html.Label("Hot THreshold Steepness"),
-        dcc.Input(id="hot_threshold_steepness", type="number", value=current_scoring_fn_kwargs['hot_threshold_steepness']),
-        html.Label("Total Score Offset"),
-        dcc.Input(id="total_score_offset", type="number", value=current_scoring_fn_kwargs['score_offset']),
-        html.Label("Enter Password"),
-        dcc.Input(id="password", type="text", value="Enter Password"),
-        html.Button(id='submit-button', n_clicks=0, children='Submit To Pipeline'),
-        html.Div(id="output-state"),
-        html.Img(src='https://github.com/gkong88/InsightProjectWithDoteShopping/blob/master/imgs/scoring_function_graph.PNG?raw=true'),
+        html.Div(
+            [
+                html.Label("Cold Max Score"),
+                dcc.Input(id="cold_max_score", type="number", value=current_scoring_fn_kwargs['max_coldness_score']),
+                html.Label("Cold Threshold for Previews"),
+                dcc.Input(id="cold_threshold_previews", type="number", value=current_scoring_fn_kwargs['min_previews_threshold']),
+                html.Label("Cold Threshold Steepness"),
+                dcc.Input(id="cold_threshold_steepness", type="number", value=current_scoring_fn_kwargs['cold_threshold_steepness']),
+            ],
+            style = {"display": "inline-block", 'borderWidth':'1px'}
+        ),
+        html.Div(
+            [
+                html.Label("Hot Max Score"),
+                dcc.Input(id="hot_max_score", type="number", value=current_scoring_fn_kwargs['max_hotness_score']),
+                html.Label("Hot Threshold for Click Thru Rate"),
+                dcc.Input(id="hot_threshold_ctr", type="number", value=current_scoring_fn_kwargs['ctr_hotness_threshold']),
+                html.Label("Hot THreshold Steepness"),
+                dcc.Input(id="hot_threshold_steepness", type="number", value=current_scoring_fn_kwargs['hot_threshold_steepness']),
+            ],
+            style = {"display": "inline-block", 'borderWidth':'1px'}
+        ),
+        html.Div(
+            [
+                html.Label("Total Score Offset"),
+                dcc.Input(id="total_score_offset", type="number", value=current_scoring_fn_kwargs['score_offset']),
+                # html.Label("Enter Password"),
+                # dcc.Input(id="password", type="text", value="Enter Password"),
+                html.Button(id='submit-button', n_clicks=0, children='Submit To Pipeline'),
+            ],
+            style = {"display": "inline-block", 'borderWidth':'1px'}
+        )
+
     ]),
     html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
     html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
@@ -98,9 +110,13 @@ app.layout = html.Div([
     dcc.Graph(
         id='s3-uptime-graph'
     ),
-    daq.StopButton(
-      id='my-daq-stopbutton'
+    # daq.StopButton(
+      # id='my-daq-stopbutton'
+    # ),
+    dcc.Graph(
+        id='bar_graph2'
     ),
+    html.Div(id="output-state"),
     dcc.Interval(
         id='interval-graph',
         interval=1 * 1000,  # in milliseconds
@@ -111,6 +127,7 @@ app.layout = html.Div([
         interval=300 * 1000,  # in milliseconds
         n_intervals=0
     )
+
 ])
 
 
@@ -124,9 +141,9 @@ def update_graph_live(n):
     df['tsnorm'] = [(ts - max_ts) / 1000 / 60 / 60 for ts in df.POST_TIMESTAMP]
     figure1 = {
         'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.02,
-                  'marker_color': colors['cold']},
+                  'marker': {"color": colors['cold']}},
                  {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.02,
-                  'marker_color': colors['hot'],
+                  'marker': {"color": colors['hot']},
                   'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
                                % (post_id, previews, full_views, full_views / max(previews, 1))
                                for post_id, previews, full_views in
@@ -141,9 +158,9 @@ def update_graph_live(n):
 
     figure2 = {
         'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.04,
-                  'marker_color': colors['cold']},
+                  'marker': {"color": colors['cold']}},
                  {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.04,
-                  'marker_color': colors['hot'],
+                  'marker': {"color": colors['hot']},
                   'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
                                 % (post_id, previews, full_views, full_views / max(previews, 1))
                                 for post_id, previews, full_views in
@@ -275,7 +292,7 @@ def service_uptime(n):
             'layout': {
                 'title': 'Uptime over last %s Hours: %s%%'%(round(total_time_ms/1000/60/60, 0), round(service_uptime_rate_percent, 3)),
                 'xaxis': {'title': 'Date'},
-                'yaxis': {'title': 'up'},
+                'yaxis': {'title': 'up', 'range':[0, 1]},
                 'hovermode': 'closest'
             }
     }
@@ -290,12 +307,11 @@ def service_uptime(n):
                State('hot_max_score', 'value'),
                State('hot_threshold_ctr', 'value'),
                State('hot_threshold_steepness', 'value'),
-               State('total_score_offset', 'value'),
-               State('password', 'value')])
+               State('total_score_offset', 'value')])
 def update_output(n_clicks,
                   cold_max_score, cold_threshold_previews, cold_threshold_steepness,
                   hot_max_score, hot_threshold_ctr, hot_threshold_steepness,
-                  total_score_offset, password):
+                  total_score_offset):
     #if password != u'password':
     #    return u'Password is incorrect!'
     try:
@@ -308,11 +324,11 @@ def update_output(n_clicks,
         input_scoring_fn_kwargs['hot_threshold_steepness'] = hot_threshold_steepness
         input_scoring_fn_kwargs['score_offset'] = total_score_offset
         p = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda x: json.dumps(x).encode('utf-8'))
-        p.send(topic='scores_config_update_prod', value=input_scoring_fn_kwargs)
+        p.send(topic='scores_config_update', value=input_scoring_fn_kwargs)
         #p.send(topic='scores_config_update', value={'max_coldness_score': cold_max_score})
         p.flush()
         p.close()
-        return u'Config change accepted! Sent to pipeline.'
+        return u'Sent!'
     except:
         return u'Inputs invalid. Please check inputs and try again'
 
