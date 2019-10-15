@@ -119,7 +119,7 @@ app.layout = html.Div([
     html.Div(id="output-state"),
     dcc.Interval(
         id='interval-graph',
-        interval=1 * 1000,  # in milliseconds
+        interval=2 * 1000,  # in milliseconds
         n_intervals=0
     ),
     dcc.Interval(
