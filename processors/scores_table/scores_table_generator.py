@@ -107,7 +107,7 @@ class Reporter:
             self.lock.release()
 
             while datetime.datetime.now() < self.next_push_timestamp:
-                sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 1)
+                sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 3)
                 time.sleep(sleep_duration)
             self.producer.send(topic=self.output_topic_name, value=posts)
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
