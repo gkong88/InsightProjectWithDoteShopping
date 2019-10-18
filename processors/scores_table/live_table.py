@@ -1,7 +1,8 @@
 import pandas as pd
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 from scoring_function import ScoringFunction
 import datetime
+import time
 from typing import Sequence
 import json
 
@@ -28,6 +29,7 @@ class LiveTable:
         :param time_window_size:
         :param scoring_function:
         """
+        self.producer = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda x: json.dumps(x).encode('utf-8'))
         self.consumer = KafkaConsumer(input_topic_name,
                                       bootstrap_servers=list(bootstrap_servers),
                                       auto_offset_reset='earliest',
@@ -35,6 +37,8 @@ class LiveTable:
                                       value_deserializer=lambda x: json.loads(x.decode('utf-8')))
         self.scoring_function = scoring_function
         self.time_window_size = time_window_size
+        self.rolling_events_processed = 0
+        self.rolling_sum_latency = 0 
         self.time_window_start = None
         self.time_window_start_epoch = None
         self.topic_partition = None
@@ -91,8 +95,21 @@ class LiveTable:
         for m in self.consumer:
             if m is not None and m.value['POST_TIMESTAMP'] > self.time_window_start_epoch:
                 self.posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
+                self.__track_latency(m)
             if m.offset >= end_offset:
                 break
+
+    def __track_latency(self, m):
+        click_timestamp = m.value['LAST_CLICK_TIMESTAMP']
+        if click_timestamp is None:
+            return
+        now = round(time.time() * 1000)
+        self.rolling_events_processed += 1
+        self.rolling_sum_latency += now - click_timestamp
+        if self.rolling_events_processed >= 10000:
+            self.producer.send(topic="average_latency", value={'average_latency': self.rolling_sum_latency/self.rolling_events_processed})
+            self.rolling_events_processed = 0
+            self.rolling_sum_latency = 0
 
     def __garbage_collect_old(self):
         """
