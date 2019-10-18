@@ -44,7 +44,11 @@ heartbeat_topic_name_source = 'heartbeat_conn_segment_source'
 heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
+# try:
 current_scoring_fn_kwargs = get_latest_message('scores_config_running').value
+# except:
+#     current_scoring_fn_kwargs = {'max_coldness_score':40, 'min_previews_threshold':20, 'cold_threshold_steepness': 0.15,
+#     'max_hotness_score':60, 'ctr_hotness_threshold':0.14, 'hot_threshold_steepness':13, 'score_offset':0}
 
 app.layout = html.Div([
     html.H1(
@@ -128,9 +132,16 @@ app.layout = html.Div([
         interval=300 * 1000,  # in milliseconds
         n_intervals=0
     ),
-    html.H3(
-            id='latency'
-    ),
+    # html.H3(
+    #         id='latency_ingest'
+    # ),
+    # html.H3(
+    #         id='latency_click'
+    # ),
+    # html.H3(
+    #         children = ["Average latency is over last 100 events processed to when ingested in live table."]
+    # )
+
 ])
 
 
@@ -179,15 +190,15 @@ def update_graph_live(n):
     return figure1, figure2
 
 
-@app.callback([Output('latency', 'children')],
-              [Input('interval-heartbeat', 'n_intervals')])
-def latency_last_10000_clicks(n):
-    m = get_latest_message('average_latency')
-    # return [str(m.value)]
-    average_latency_from_click = m.value['average_latency_click']
-    average_latency_from_ingestion = m.value['average_latency_ingest']
-    return ["Average latency from mobile timestamp: %s seconds\nAverage latency from ingestion: %s seconds\n\nAverage latency is over last 100 events processed to when ingested in live table."%(round(average_latency_from_click/1000, 3), round(average_latency_from_ingestion/1000),3)]
-
+# @app.callback([Output('latency_ingest', 'children'), Output('latency_click', 'children')],
+#               [Input('interval-graph', 'n_intervals')])
+# def latency_last_100_clicks(n):
+#     m = get_latest_message('average_latency')
+#     # return [str(m.value)]
+#     average_latency_from_click = m.value['average_latency_click']
+#     average_latency_from_ingestion = m.value['average_latency_ingest']
+#     return (["Average latency from mobile timestamp: %s seconds"%average_latency_from_click],
+#             ["Average latency from ingestion: %s seconds"%average_latency_from_ingestion])
 
 
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
