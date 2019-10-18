@@ -3,6 +3,7 @@ import json
 from flask_restful import Resource, Api
 import flatten_json
 import datetime
+import time
 import os, sys
 import resource
 from kafka import KafkaProducer
@@ -76,12 +77,15 @@ class SegmentSourceConnector(Resource):
 
         :return: response code of post request to Kafka REST Proxy
         """
+        now = round(time.time() * 1000)
+
         # flatten json so nested attributes can be used in KSQL analysis
         flat_json_object = flatten_json.flatten(json.loads(request.data))
 
         # extract timestamp and add it to json
         segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
         flat_json_object["segment_timestamp"] = segment_timestamp
+        flat_json_object['ingestion_timestamp'] = now
 
         # determine topic to send event
         topic = ''.join(c for c in str(flat_json_object.get("type") + flat_json_object.get("event")) if
