@@ -38,7 +38,8 @@ class LiveTable:
         self.scoring_function = scoring_function
         self.time_window_size = time_window_size
         self.rolling_events_processed = 0
-        self.rolling_sum_latency = 0 
+        self.rolling_sum_ingest_latency = 0
+        self.rolling_sum_click_latency = 0
         self.time_window_start = None
         self.time_window_start_epoch = None
         self.topic_partition = None
@@ -101,16 +102,20 @@ class LiveTable:
 
     def __track_latency(self, m):
         click_timestamp = m.value['LAST_CLICK_TIMESTAMP']
+        ingest_timestamp = m.value['INGEST_TIMESTAMP']
         if click_timestamp is None:
             return
         now = round(time.time() * 1000)
         self.rolling_events_processed += 1
-        self.rolling_sum_latency += now - click_timestamp
-        if self.rolling_events_processed >= 10000:
-            self.producer.send(topic="average_latency", value={'average_latency': self.rolling_sum_latency/self.rolling_events_processed})
+        self.rolling_sum_ingest_latency += now - ingest_timestamp
+        self.rolling_sum_click_latency += now - click_timestamp
+        if self.rolling_events_processed >= 1000:
+            self.producer.send(topic="average_latency", value={'average_latency_ingest': self.rolling_sum_ingest_latency / self.rolling_events_processed,
+                                                               'average_latency_click': self.rolling_sum_click_latency / self.rolling_events_processed})
             self.producer.flush()
             self.rolling_events_processed = 0
-            self.rolling_sum_latency = 0
+            self.rolling_sum_ingest_latency = 0
+            self.rolling_sum_click_latency = 0
 
     def __garbage_collect_old(self):
         """
