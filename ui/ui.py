@@ -96,9 +96,6 @@ app.layout = html.Div([
 
     ]),
     html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
-    html.Div[
-            id='latency'
-            ],
     html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
     daq.Indicator(
         id='heartbeat-source'
@@ -113,6 +110,7 @@ app.layout = html.Div([
     dcc.Graph(
         id='s3-uptime-graph'
     ),
+
     # daq.StopButton(
       # id='my-daq-stopbutton'
     # ),
@@ -129,8 +127,10 @@ app.layout = html.Div([
         id='interval-heartbeat',
         interval=300 * 1000,  # in milliseconds
         n_intervals=0
-    )
-
+    ),
+    html.H3(
+            id='latency'
+    ),
 ])
 
 
@@ -178,6 +178,15 @@ def update_graph_live(n):
     }
     return figure1, figure2
 
+
+@app.callback([Output('latency', 'children')],
+              [Input('interval-heartbeat', 'n_intervals')])
+def latency_last_10000_clicks(n):
+    m = get_latest_message('average_latency')
+    # return [str(m.value)]
+    average_latency_from_click = m.value['average_latency_click']
+    average_latency_from_ingestion = m.value['average_latency_ingest']
+    return ["Average latency from mobile timestamp: %s seconds\nAverage latency from ingestion: %s seconds\n\nAverage latency is over last 100 events processed to when ingested in live table."%(round(average_latency_from_click/1000, 3), round(average_latency_from_ingestion/1000),3)]
 
 
 
