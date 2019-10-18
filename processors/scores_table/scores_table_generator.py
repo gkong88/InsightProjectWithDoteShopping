@@ -96,7 +96,7 @@ class Reporter:
             self.lock.acquire()
             self.table.update()
             self.lock.release()
-            print('updated')
+            #print('updated')
 
     def __run_push_snapshot_forever(self):
         """
@@ -112,7 +112,7 @@ class Reporter:
                 time.sleep(sleep_duration)
             self.producer.send(topic=self.output_topic_name, value=posts)
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
-            print('pushed')
+            #print('pushed')
 
     def __run_listen_for_config_changes_forever(self):
         """

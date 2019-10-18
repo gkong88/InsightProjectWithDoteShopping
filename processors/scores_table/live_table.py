@@ -118,6 +118,10 @@ class LiveTable:
             self.rolling_events_processed = 0
             self.rolling_sum_ingest_latency = 0
             self.rolling_sum_click_latency = 0
+            print("===================================")
+            print("         PUSH LATENCY METRICS      ")
+            print(m.value)
+            print("===================================")
 
     def __garbage_collect_old(self):
         """
