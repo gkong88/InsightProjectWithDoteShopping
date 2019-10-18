@@ -85,7 +85,7 @@ class SegmentSourceConnector(Resource):
         # extract timestamp and add it to json
         segment_timestamp = segment_timestamp_to_unix_millis(flat_json_object.get("timestamp"))
         flat_json_object["segment_timestamp"] = segment_timestamp
-        flat_json_object['ingestion_timestamp'] = now
+        flat_json_object['ingest_timestamp'] = now
 
         # determine topic to send event
         topic = ''.join(c for c in str(flat_json_object.get("type") + flat_json_object.get("event")) if
