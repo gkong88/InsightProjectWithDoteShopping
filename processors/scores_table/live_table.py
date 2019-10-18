@@ -96,7 +96,7 @@ class LiveTable:
         for m in self.consumer:
             if m is not None and m.value['POST_TIMESTAMP'] > self.time_window_start_epoch:
                 self.posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
-                self.__track_latency(m)
+                # self.__track_latency(m)
             if m.offset >= end_offset:
                 break
 
@@ -111,17 +111,17 @@ class LiveTable:
         self.rolling_events_processed += 1
         self.rolling_sum_ingest_latency += now - ingest_timestamp
         self.rolling_sum_click_latency += now - click_timestamp
-        if self.rolling_events_processed >= 20:
+        if self.rolling_events_processed >= 1000:
             metrics = {'average_latency_ingest': self.rolling_sum_ingest_latency / self.rolling_events_processed,'average_latency_click': self.rolling_sum_click_latency / self.rolling_events_processed}
             self.producer.send(topic="average_latency", value=metrics)
             #self.producer.flush()
             self.rolling_events_processed = 0
             self.rolling_sum_ingest_latency = 0
             self.rolling_sum_click_latency = 0
-            print("===================================")
-            print("         PUSH LATENCY METRICS      ")
-            print(metrics)
-            print("===================================")
+            #print("===================================")
+            #print("         PUSH LATENCY METRICS      ")
+            #print(metrics)
+            #print("===================================")
 
     def __garbage_collect_old(self):
         """
