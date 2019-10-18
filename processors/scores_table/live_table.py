@@ -111,16 +111,16 @@ class LiveTable:
         self.rolling_events_processed += 1
         self.rolling_sum_ingest_latency += now - ingest_timestamp
         self.rolling_sum_click_latency += now - click_timestamp
-        if self.rolling_events_processed >= 1000:
-            self.producer.send(topic="average_latency", value={'average_latency_ingest': self.rolling_sum_ingest_latency / self.rolling_events_processed,
-                                                               'average_latency_click': self.rolling_sum_click_latency / self.rolling_events_processed})
+        if self.rolling_events_processed >= 20:
+            metrics = {'average_latency_ingest': self.rolling_sum_ingest_latency / self.rolling_events_processed,'average_latency_click': self.rolling_sum_click_latency / self.rolling_events_processed}
+            self.producer.send(topic="average_latency", value={'average_latency_ingest': metrics})
             self.producer.flush()
             self.rolling_events_processed = 0
             self.rolling_sum_ingest_latency = 0
             self.rolling_sum_click_latency = 0
             print("===================================")
             print("         PUSH LATENCY METRICS      ")
-            print(m.value)
+            print(metrics)
             print("===================================")
 
     def __garbage_collect_old(self):
