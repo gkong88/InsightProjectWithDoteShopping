@@ -57,13 +57,13 @@ class LiveTable:
         """
         self.__garbage_collect_old()
         self.__bulk_consume_new_events()
-        self.__apply_score()
 
     def get_snapshot(self):
         """
 
         :return: return a copy of current state of table
         """
+        self.__apply_score()
         return self.posts.copy()
 
     def update_scoring_function(self, scoring_function: ScoringFunction):
@@ -75,7 +75,7 @@ class LiveTable:
         :return:
         """
         self.scoring_function = scoring_function
-        self.__apply_score()
+        # self.__apply_score()
 
     def __apply_score(self):
         """
