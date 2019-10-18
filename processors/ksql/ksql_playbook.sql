@@ -46,7 +46,7 @@ select CREATE_POST.segment_timestamp as post_timestamp, CLICK.segment_timestamp 
 create table CLICK__FI_RECENT_POST__AG_COUNTS with (timestamp = 'post_timestamp') AS
 select properties_shoppable_post_id, post_timestamp, 
         MAX(click_timestamp) as last_click_timestamp,
-        MAX(last_click_timestamp) as last_click_timestamp,
+        MAX(ingest_timestamp) as ingest_timestamp,
         count(*) as total,
         SUM(CASE WHEN properties_display = 'preview' or properties_display = 'thumbnail' THEN 1 ELSE 0 END) as preview,
         SUM(CASE WHEN properties_display = 'detail' or properties_display = 'full_view' THEN 1 ELSE 0 END) as full_view
