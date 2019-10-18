@@ -101,9 +101,11 @@ class LiveTable:
                 break
 
     def __track_latency(self, m):
+        if 'LAST_CLICK_TIMESTAMP' not in m.value or 'INGEST_TIMESTAMP' not in m.value:
+            return
         click_timestamp = m.value['LAST_CLICK_TIMESTAMP']
         ingest_timestamp = m.value['INGEST_TIMESTAMP']
-        if click_timestamp is None:
+        if click_timestamp is None or ingest_timestamp is None:
             return
         now = round(time.time() * 1000)
         self.rolling_events_processed += 1
