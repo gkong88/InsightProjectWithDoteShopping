@@ -96,6 +96,9 @@ app.layout = html.Div([
 
     ]),
     html.H1(children='Monitoring', style={'textAlign':'center', 'colors':colors['text']}),
+    html.Div[
+            id='latency'
+            ],
     html.H2(children='Heartbeat', style={'textAlign':'center', 'colors':colors['text']}),
     daq.Indicator(
         id='heartbeat-source'
@@ -174,6 +177,8 @@ def update_graph_live(n):
             }
     }
     return figure1, figure2
+
+
 
 
 @app.callback([Output('heartbeat-source', 'label'), Output('heartbeat-source', 'color'), Output('heartbeat-source', 'value')],
