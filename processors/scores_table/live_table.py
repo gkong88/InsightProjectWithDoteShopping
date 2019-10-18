@@ -108,6 +108,7 @@ class LiveTable:
         self.rolling_sum_latency += now - click_timestamp
         if self.rolling_events_processed >= 10000:
             self.producer.send(topic="average_latency", value={'average_latency': self.rolling_sum_latency/self.rolling_events_processed})
+            self.producer.flush()
             self.rolling_events_processed = 0
             self.rolling_sum_latency = 0
 
