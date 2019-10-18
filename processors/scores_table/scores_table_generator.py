@@ -25,8 +25,8 @@ class Reporter:
                  bootstrap_servers: Sequence[str],
                  input_table_updates_topic_name: str,
                  output_snapshot_topic_name: str,
-                 scores_config_running_topic_name: str = 'scores_config_running_prod',
-                 scores_config_update_topic_name: str = 'scores_config_update_prod',
+                 scores_config_running_topic_name: str = 'scores_config_running',
+                 scores_config_update_topic_name: str = 'scores_config_update',
                  scoring_function_config: dict = ScoringFunction().get_config(),
                  interval_snapshot_s: int = 1,
                  interval_listen_config_update_s: int = 1
@@ -63,6 +63,7 @@ class Reporter:
         # init live table to hold dynamic state
         self.table = LiveTable(self.input_table_updates_topic_name, self.bootstrap_servers, datetime.timedelta(days=1))
         # apply scoring function, publish message containing these configs (for ui)
+        self.last_offset_scores_config_update = -1 
         self.__update_scoring_function(scoring_function_config)
         self.last_offset_scores_config_update = -1
 
@@ -122,9 +123,11 @@ class Reporter:
         while True:
             time.sleep(self.listen_period_s)
             msg = get_latest_message(input_topic_name=self.scores_config_update_topic_name)
-            if msg is not None and msg.offset is not self.last_offset_scores_config_update:
+            if msg is not None and msg.offset > self.last_offset_scores_config_update:
+                self.last_offset_scores_config_update = msg.offset
                 print("===================================")
-                print("Config change received: %s" % msg.value)
+                print("Config change received: %s"%msg.value)
+                print("Offset: %s"%msg.offset)
                 self.__update_scoring_function(msg.value)
                 print("Config change affected")
                 print("===================================")
@@ -156,7 +159,7 @@ if __name__ == "__main__":
 
     # init reporter and run
     input_table_updates_topic_name = 'CLICK__FI_RECENT_POST__AG_COUNTS'
-    output_snapshot_topic_name = "recent_posts_scores_snapshot_prod"
+    output_snapshot_topic_name = "recent_posts_scores_snapshot"
     reporter = Reporter(input_table_updates_topic_name=input_table_updates_topic_name,
                         bootstrap_servers=bootstrap_servers,
                         output_snapshot_topic_name=output_snapshot_topic_name)
