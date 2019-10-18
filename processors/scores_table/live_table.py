@@ -114,7 +114,7 @@ class LiveTable:
         if self.rolling_events_processed >= 20:
             metrics = {'average_latency_ingest': self.rolling_sum_ingest_latency / self.rolling_events_processed,'average_latency_click': self.rolling_sum_click_latency / self.rolling_events_processed}
             self.producer.send(topic="average_latency", value=metrics)
-            self.producer.flush()
+            #self.producer.flush()
             self.rolling_events_processed = 0
             self.rolling_sum_ingest_latency = 0
             self.rolling_sum_click_latency = 0
