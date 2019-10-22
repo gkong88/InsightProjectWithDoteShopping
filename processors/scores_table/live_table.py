@@ -3,6 +3,7 @@ from kafka import KafkaConsumer, KafkaProducer
 from scoring_function import ScoringFunction
 import datetime
 import time
+import threading
 from typing import Sequence
 import json
 
@@ -46,6 +47,7 @@ class LiveTable:
         self.__seek_to_window_start() #initializes time_window_start, time_window_start_epoch, and topic_partition
         self.posts = {}
         self.__bulk_consume_new_events()
+        self.scoring_function_loc = threading.lock()
 
     def update(self):
         """
@@ -74,17 +76,21 @@ class LiveTable:
         :param scoring_function:
         :return:
         """
+        self.scoring_function_loc.acquire()
         self.scoring_function = scoring_function
+        self.scoring_function_loc.release()
         # self.__apply_score()
 
     def __apply_score(self):
         """
         Applies scoring function on all entries in table
         """
+        self.scoring_function_loc.acquire()
         for key, json_dict in self.posts.items():
             json_dict['score'] = self.scoring_function.score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
             json_dict['coldness_score'] = self.scoring_function.coldness_score(json_dict['PREVIEW'])
             json_dict['hotness_score'] = self.scoring_function.hotness_score(json_dict['PREVIEW'], json_dict['FULL_VIEW'])
+        self.scoring_function_loc.release()
 
     def __bulk_consume_new_events(self):
         """
