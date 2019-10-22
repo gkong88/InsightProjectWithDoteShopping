@@ -54,7 +54,7 @@ class Reporter:
         self.next_push_timestamp = datetime.datetime(1970, 1, 1)
 
         # init lock for coordinating update and push events.
-        self.lock = threading.Lock()
+        self.table_state_lock = threading.Lock()
         self.threads = []
 
         # init producer for publishing snapshots
@@ -93,9 +93,9 @@ class Reporter:
         :return:
         """
         while True:
-            self.lock.acquire()
+            self.table_state_lock.acquire()
             self.table.update()
-            self.lock.release()
+            self.table_state_lock.release()
             #print('updated')
 
     def __run_push_snapshot_forever(self):
@@ -103,9 +103,9 @@ class Reporter:
         Periodically publishes snapshot of table to kafka topic
         """
         while True:
-            self.lock.acquire()
+            self.table_state_lock.acquire()
             posts = self.table.get_snapshot()
-            self.lock.release()
+            self.table_state_lock.release()
 
             while datetime.datetime.now() < self.next_push_timestamp:
                 sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 2)
@@ -141,12 +141,12 @@ class Reporter:
         :return:
         """
         # guarantees mutual exclusion over methods that USE the scoring function.
-        self.lock.acquire()
+        # self.lock.acquire()
         scoring_function = ScoringFunction(**scoring_function_config)
         self.table.update_scoring_function(scoring_function)
         self.producer.send(topic=self.scores_config_running_topic_name, value=scoring_function_config)
         self.producer.flush()
-        self.lock.release()
+        # self.lock.release()
 
 
 if __name__ == "__main__":
