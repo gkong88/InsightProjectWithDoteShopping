@@ -63,7 +63,7 @@ app.layout = html.Div([
         id='bar_graph'
     ),
     html.Label("Time Window (Hours)"),
-    dcc.Input(id="hours_window", type="number", value=2),
+    dcc.Input(id="hours_window", type="number", value=3),
 
     html.H1(children='Control Center', style={'textAlign':'center', 'colors':colors['text']}),
     html.Div(
@@ -148,7 +148,7 @@ app.layout = html.Div([
 ])
 
 
-@app.callback([Output('bar_graph', 'figure')],
+@app.callback(Output('bar_graph', 'figure'),
               [Input('interval-graph', 'n_intervals'), Input('hours_window', 'value')])
 def update_graph_live(n, hours_window):
     message = get_latest_message(report_topic_name, report_config)
@@ -168,7 +168,7 @@ def update_graph_live(n, hours_window):
     ],
         'layout': {'title': 'Post Scores. Last Updates: %s'%str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
                    'barmode': 'stack',
-                   'xaxis': {'title': 'Hours Ago', 'range': [hours_window, 0]},
+                   'xaxis': {'title': 'Hours Ago', 'range': [-hours_window, 0]},
                    'yaxis': {'title': 'Score'}
                    }
     }
