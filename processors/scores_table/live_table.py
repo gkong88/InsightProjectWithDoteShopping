@@ -76,9 +76,11 @@ class LiveTable:
         :param scoring_function:
         :return:
         """
+        print("updating scoring fn")
         self.scoring_function_lock.acquire()
         self.scoring_function = scoring_function
         self.scoring_function_lock.release()
+        print("updated")
         # self.__apply_score()
 
     def __apply_score(self):
