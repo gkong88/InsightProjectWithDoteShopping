@@ -56,11 +56,14 @@ app.layout = html.Div([
         style={
             'textAlign': 'center',
             'colors': colors['text']
-        }
+        },
+
     ),
     dcc.Graph(
         id='bar_graph'
     ),
+    html.Label("Time Window (Hours)"),
+    dcc.Input(id="hours_window", type="number", value=2),
 
     html.H1(children='Control Center', style={'textAlign':'center', 'colors':colors['text']}),
     html.Div(
@@ -118,9 +121,9 @@ app.layout = html.Div([
     # daq.StopButton(
       # id='my-daq-stopbutton'
     # ),
-    dcc.Graph(
-        id='bar_graph2'
-    ),
+    # dcc.Graph(
+    #     id='bar_graph2'
+    # ),
     html.Div(id="output-state"),
     dcc.Interval(
         id='interval-graph',
@@ -145,9 +148,9 @@ app.layout = html.Div([
 ])
 
 
-@app.callback([Output('bar_graph', 'figure'), Output('bar_graph2', 'figure')],
-              [Input('interval-graph', 'n_intervals')])
-def update_graph_live(n):
+@app.callback([Output('bar_graph', 'figure')],
+              [Input('interval-graph', 'n_intervals'), Input('hours_window', 'value')])
+def update_graph_live(n, hours_window):
     message = get_latest_message(report_topic_name, report_config)
     df = pd.read_json(json.dumps(message.value), orient='index')
     df['date'] = [datetime.datetime.fromtimestamp(ts / 1000) for ts in df.POST_TIMESTAMP]
@@ -165,29 +168,29 @@ def update_graph_live(n):
     ],
         'layout': {'title': 'Post Scores. Last Updates: %s'%str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
                    'barmode': 'stack',
-                   'xaxis': {'title': 'Hours Ago', 'range': [-2, 0]},
+                   'xaxis': {'title': 'Hours Ago', 'range': [hours_window, 0]},
                    'yaxis': {'title': 'Score'}
                    }
     }
 
-    figure2 = {
-        'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.04,
-                  'marker': {"color": colors['cold']}},
-                 {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.04,
-                  'marker': {"color": colors['hot']},
-                  'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
-                                % (post_id, previews, full_views, full_views / max(previews, 1))
-                                for post_id, previews, full_views in
-                                zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]}
-                 ],
-        'layout': {
-            'title': 'Post Scores. Last Updates: %s' % str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
-            'barmode': 'stack',
-            'xaxis': {'title': 'Hours Ago', 'range': [-24, 0]},
-            'yaxis': {'title': 'Score'}
-            }
-    }
-    return figure1, figure2
+    # figure2 = {
+    #     'data': [{'x': df['tsnorm'], 'y': df['coldness_score'], 'type': 'bar', 'name': 'COLD score', 'width': 0.04,
+    #               'marker': {"color": colors['cold']}},
+    #              {'x': df['tsnorm'], 'y': df['hotness_score'], 'type': 'bar', 'name': 'HOT score', 'width': 0.04,
+    #               'marker': {"color": colors['hot']},
+    #               'hovertext': ['Post ID: %s\nPreviews: %s\nFull Views: %s\nCTR: %s'
+    #                             % (post_id, previews, full_views, full_views / max(previews, 1))
+    #                             for post_id, previews, full_views in
+    #                             zip(df['PROPERTIES_SHOPPABLE_POST_ID'], df['PREVIEW'], df['FULL_VIEW'])]}
+    #              ],
+    #     'layout': {
+    #         'title': 'Post Scores. Last Updates: %s' % str(datetime.datetime.now().astimezone(timezone('US/Pacific'))),
+    #         'barmode': 'stack',
+    #         'xaxis': {'title': 'Hours Ago', 'range': [-24, 0]},
+    #         'yaxis': {'title': 'Score'}
+    #         }
+    # }
+    return figure1
 
 
 # @app.callback([Output('latency_ingest', 'children'), Output('latency_click', 'children')],
