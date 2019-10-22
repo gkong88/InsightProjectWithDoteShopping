@@ -94,8 +94,10 @@ class Reporter:
         """
         while True:
             self.table_state_lock.acquire()
+            print("updater has lock")
             self.table.update()
             self.table_state_lock.release()
+            print("updater releases lock")
             #print('updated')
 
     def __run_push_snapshot_forever(self):
@@ -103,8 +105,9 @@ class Reporter:
         Periodically publishes snapshot of table to kafka topic
         """
         while True:
-            print('pushing')
+            print('pusher requesting lock')
             self.table_state_lock.acquire()
+            print('pusher has lock')
             posts = self.table.get_snapshot()
             self.table_state_lock.release()
 
@@ -112,8 +115,9 @@ class Reporter:
                 sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 2)
                 time.sleep(sleep_duration)
             self.producer.send(topic=self.output_topic_name, value=posts)
+            self.producer.flush()
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
-            print('pushed')
+            print('pushed, releasing lock')
 
     def __run_listen_for_config_changes_forever(self):
         """
