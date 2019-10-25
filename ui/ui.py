@@ -45,7 +45,8 @@ heartbeat_topic_name_table_generator = 'heartbeat_table_generator'
 s3_topic_name = 'connector_s3_sink_push_log'
 
 # try:
-current_scoring_fn_kwargs = get_latest_message('scores_config_running').value
+current_scoring_fn_kwargs = get_latest_message('scores_config_update').value
+print(current_scoring_fn_kwargs)
 # except:
 #     current_scoring_fn_kwargs = {'max_coldness_score':40, 'min_previews_threshold':20, 'cold_threshold_steepness': 0.15,
 #     'max_hotness_score':60, 'ctr_hotness_threshold':0.14, 'hot_threshold_steepness':13, 'score_offset':0}
