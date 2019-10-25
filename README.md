@@ -41,33 +41,26 @@ ingests the events into Kafka, the streaming platform. Relevant events are:
 * Post Preview
 * Post Click
 
-KSQL, which 
- 
+KSQL is used for computing real-time aggregates.
+
+Aggregates are used by a python application that applies scoring function and sends snapshots to consumers.
 
 ![data_pipeline](imgs/data_pipeline.PNG?raw=true "Data Pipeline")
 *Data Pipeline*
 
-## Deployment
+## Setup
 
-Components of the service should be installed in the order below. 
-Deployment instructions are in the README.md files located in the linked directories. 
+See respective README's for setup instructions.
 
-* Kafka Setup:
- 
-* Connectors: Ingestion 
-* Set up Webhooks in segment to send events to REST *ingest.py*
-* Set up segment connector
++ [Kafka](https://github.com/gkong88/InsightProjectWithDoteShopping/tree/master/config)
++ [KSQL](https://github.com/gkong88/InsightProjectWithDoteShopping/tree/master/processors/ksql)
++ [Segment Source](https://github.com/gkong88/InsightProjectWithDoteShopping/tree/master/connectors)
++ [Python Processor](https://github.com/gkong88/InsightProjectWithDoteShopping/tree/master/processors/scores_table)
++ [S3 Sink](https://github.com/gkong88/InsightProjectWithDoteShopping/tree/master/connectors)
++ [Dashboard](https://github.com/gkong88/InsightProjectWithDoteShopping/tree/master/ui) 
+  
 
-* Processing: 
-* Set up KSQL queries
-* Set up
+### Misc Links
 
-* Connectors: Consumer
-* Set up S3 Consumer
-
-* UI: Set up UI  
-
-### Links
-
-* [Public UI (inactive controls)](http://cleardata.club)
+* [UI](http://cleardata.club)
 * [Presentation](https://docs.google.com/presentation/d/1X8pTTB6mPH0ciCwkJ0ja58ogYM26Bq7wKbcdxdAAaBk/)
