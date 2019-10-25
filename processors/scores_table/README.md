@@ -1,5 +1,3 @@
-TODO
-## Python dependencies
+## Usage
 
-pip install kafka
-pip install pandas
+`python scores_table_generator.py`
