@@ -3,8 +3,6 @@ This document contains ksql commands to produce an event stream for real-time sc
 of recent posts.
 */
 
-SET 'auto.offset.reset'='earliest';
-
 -- raw click event stream from segment
 CREATE STREAM CLICK
     (
@@ -52,19 +50,6 @@ select properties_shoppable_post_id, post_timestamp,
         SUM(CASE WHEN properties_display = 'detail' or properties_display = 'full_view' THEN 1 ELSE 0 END) as full_view
         from CLICK__FI_RECENT_POST
         group by properties_shoppable_post_id, post_timestamp;
-
--- click streams, (FI)iltered by recent posts, (AG)gregated by counts of post type, (EN)riched with a custom scoring function
--- DEVELOPER NOTE: Overwriting old data: Check to ensure the kafka topic has LOG COMPACTION ENABLED. This greatly reduces
---                     the computational burden when materializing a snapshot of this table via replay
--- DEVELOPER NOTE: Garbage collection: Check to ensure the kafka topic has LOG DELETION ENABLED and set the log retention time
---                      to that of the appropriate time range.
---                      This provides a "garbage collection"mechanism to retire old data from the topic and eases
---                      storage burden on kafka, as well as computational burden for materializing a snapshot.
--- DEVELOPER NOTE: see ksql UDF docs to change scoring function: https://docs.confluent.io/current/ksql/docs/developer-guide/udf.html
--- DEVELOPER NOTE: Check to ensure that the source kafka topic has a retention time of at least 3 days!
-create table CLICK__FI_RECENT_POST__AG_COUNTS__EN_SCORE2 with (PARTITIONS = 1) AS 
-select properties_shoppable_post_id, post_timestamp, last_click_timestamp, PREVIEW, FULL_VIEW, (CAST(FULL_VIEW as double) / (cast(PREVIEW as double) + cast(FULL_VIEW as double))) as CTR, RTSCORING(CAST(preview AS BIGINT), CAST(full_view AS BIGINT)) as RT_SCORE
-from CLICK__FI_RECENT_POST__AG_COUNTS;
 
 
 
