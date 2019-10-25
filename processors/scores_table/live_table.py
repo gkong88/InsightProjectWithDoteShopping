@@ -100,13 +100,24 @@ class LiveTable:
         scores for all posts by replaying them into a dictionary.
 
         """
-        end_offset = self.consumer.end_offsets([self.topic_partition])[self.topic_partition] - 1
+        # end_offset = self.consumer.end_offsets([self.topic_partition])[self.topic_partition] - 1
+        end_offsets = {}
+        partitions = {}
+        for p in self.assignments:
+            partitions[p.partition] = p
+            end_offsets[p.partition] = self.consumer.end_offsets([p])[p] - 1
+            self.consumer.resume(p)
+
+        topics_consumed = 0
         for m in self.consumer:
             if m is not None and m.value['POST_TIMESTAMP'] > self.time_window_start_epoch:
                 self.posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
                 # self.__track_latency(m)
-            if m.offset >= end_offset:
-                break
+            if m.offset >= end_offsets[m.partition]:
+                self.consumer.pause(partitions[m.partition])
+                topics_consumed += 1
+                if topics_consumed >= len(partitions):
+                    break
 
     def __track_latency(self, m):
         if 'LAST_CLICK_TIMESTAMP' not in m.value or 'INGEST_TIMESTAMP' not in m.value:
@@ -152,6 +163,7 @@ class LiveTable:
             while len(message) == 0:
                 message = self.consumer.poll(1, 1)
         self.topic_partition = self.consumer.assignment().pop()
+        self.topic_partitions = self.consumer.assignment()
         time_window_start_epoch = int(self.time_window_start.timestamp()*1000)
 
         # get first offset that is in the time window
