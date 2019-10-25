@@ -163,7 +163,7 @@ class LiveTable:
             while len(message) == 0:
                 message = self.consumer.poll(1, 1)
         self.topic_partition = self.consumer.assignment().pop()
-        self.topic_partitions = self.consumer.assignment()
+        self.assignments = self.consumer.assignment()
         time_window_start_epoch = int(self.time_window_start.timestamp()*1000)
 
         # get first offset that is in the time window
