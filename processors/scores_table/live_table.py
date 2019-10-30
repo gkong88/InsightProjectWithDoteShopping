@@ -6,6 +6,7 @@ import time
 import threading
 from typing import Sequence
 import json
+import random
 
 
 class LiveTable:
@@ -35,6 +36,7 @@ class LiveTable:
                                       bootstrap_servers=list(bootstrap_servers),
                                       auto_offset_reset='earliest',
                                       enable_auto_commit=True,
+                                      group_id = random.randint(0,999999),
                                       value_deserializer=lambda x: json.loads(x.decode('utf-8')))
         self.scoring_function = scoring_function
         self.time_window_size = time_window_size
@@ -103,12 +105,21 @@ class LiveTable:
         # end_offset = self.consumer.end_offsets([self.topic_partition])[self.topic_partition] - 1
         end_offsets = {}
         partitions = {}
+        topics_consumed = 0
         for p in self.assignments:
             partitions[p.partition] = p
             end_offsets[p.partition] = self.consumer.end_offsets([p])[p] - 1
-            self.consumer.resume(p)
+            if self.consumer.committed(p) is not None and self.consumer.committed(p) >= end_offsets[p.partition]:
+                topics_consumed += 1
+            else:
+                self.consumer.resume(p)
 
-        topics_consumed = 0
+        if topics_consumed >= len(partitions):
+            print("no new data")
+            return
+
+        print("updates in prog")
+                        
         for m in self.consumer:
             if m is not None and m.value['POST_TIMESTAMP'] > self.time_window_start_epoch:
                 self.posts[m.value['PROPERTIES_SHOPPABLE_POST_ID']] = m.value
@@ -116,8 +127,10 @@ class LiveTable:
             if m.offset >= end_offsets[m.partition]:
                 self.consumer.pause(partitions[m.partition])
                 topics_consumed += 1
+                print(topics_consumed)
                 if topics_consumed >= len(partitions):
                     break
+        self.consumer.commit()
 
     def __track_latency(self, m):
         if 'LAST_CLICK_TIMESTAMP' not in m.value or 'INGEST_TIMESTAMP' not in m.value:
