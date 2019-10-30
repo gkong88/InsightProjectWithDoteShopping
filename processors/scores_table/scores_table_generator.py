@@ -131,6 +131,7 @@ class Reporter:
                    'enable_auto_commit': True,
                    'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
         c = KafkaConsumer(**configs)
+        c.subscribe(self.scores_config_running_topic_name)
 
         while True:
             msgs = c.poll(float("Inf"))
