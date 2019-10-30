@@ -1,4 +1,4 @@
-from kafka import KafkaProducer
+from kafka import KafkaProducer, KafkaConsumer
 import json
 from scoring_function import ScoringFunction
 from live_table import LiveTable
@@ -63,9 +63,7 @@ class Reporter:
         # init live table to hold dynamic state
         self.table = LiveTable(self.input_table_updates_topic_name, self.bootstrap_servers, datetime.timedelta(days=1))
         # apply scoring function, publish message containing these configs (for ui)
-        self.last_offset_scores_config_update = -1 
         self.__update_scoring_function(scoring_function_config)
-        self.last_offset_scores_config_update = -1
 
     def run(self):
         """
@@ -125,17 +123,25 @@ class Reporter:
 
         When a new message is recieved, locks instance state and applies update.
         """
+        # c = KafkaConsumer(topics=[self.scores_config_update_topic_name],
+        configs = {'bootstrap_servers': ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
+                                         'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
+                                         'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'],
+                   'auto_offset_reset': 'latest',
+                   'enable_auto_commit': True,
+                   'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
+        c = KafkaConsumer(**configs)
+
         while True:
-            time.sleep(self.listen_period_s)
-            msg = get_latest_message(input_topic_name=self.scores_config_update_topic_name)
-            if msg is not None and msg.offset > self.last_offset_scores_config_update:
-                self.last_offset_scores_config_update = msg.offset
-                print("===================================")
-                print("Config change received: %s"%msg.value)
-                print("Offset: %s"%msg.offset)
-                self.__update_scoring_function(msg.value)
-                print("Config change affected")
-                print("===================================")
+            msgs = c.poll(float("Inf"))
+            if len(msgs) == 0:
+                continue
+            update = list(msgs.values())[-1][-1].value
+            print("===================================")
+            print("Config change received: %s"%update)
+            self.__update_scoring_function(update)
+            print("Config change affected")
+            print("===================================")
 
     def __update_scoring_function(self, scoring_function_config: dict):
         """
