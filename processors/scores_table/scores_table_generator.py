@@ -9,6 +9,7 @@ import os, sys
 sys.path.insert(0, os.path.abspath('../../util'))
 from utility import RepeatPeriodically, heartbeat, get_latest_message
 from typing import Sequence
+import pdb
 
 
 class Reporter:
@@ -92,10 +93,10 @@ class Reporter:
         """
         while True:
             self.table_state_lock.acquire()
-            print("updater has lock")
+            #print("updater has lock")
             self.table.update()
             self.table_state_lock.release()
-            print("updater releases lock")
+            #print("updater releases lock")
             #print('updated')
 
     def __run_push_snapshot_forever(self):
@@ -103,19 +104,19 @@ class Reporter:
         Periodically publishes snapshot of table to kafka topic
         """
         while True:
-            print('pusher requesting lock')
+            #print('pusher requesting lock')
             self.table_state_lock.acquire()
-            print('pusher has lock')
+            #print('pusher has lock')
             posts = self.table.get_snapshot()
             self.table_state_lock.release()
 
             while datetime.datetime.now() < self.next_push_timestamp:
-                sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 2)
+                sleep_duration = max((self.next_push_timestamp - datetime.datetime.now()).seconds, 1)
                 time.sleep(sleep_duration)
             self.producer.send(topic=self.output_topic_name, value=posts)
             self.producer.flush()
             self.next_push_timestamp = datetime.datetime.now() + self.min_push_interval
-            print('pushed, releasing lock')
+            #print('pushed, releasing lock')
 
     def __run_listen_for_config_changes_forever(self):
         """
@@ -127,22 +128,37 @@ class Reporter:
         configs = {'bootstrap_servers': ['ec2-100-20-18-195.us-west-2.compute.amazonaws.com:9092',
                                          'ec2-100-20-8-59.us-west-2.compute.amazonaws.com:9092',
                                          'ec2-100-20-75-14.us-west-2.compute.amazonaws.com:9092'],
+                                         'group_id': 1,
                    'auto_offset_reset': 'latest',
                    'enable_auto_commit': True,
                    'value_deserializer': lambda x: json.loads(x.decode('utf-8'))}
         c = KafkaConsumer(**configs)
-        c.subscribe(self.scores_config_running_topic_name)
+        c.subscribe(self.scores_config_update_topic_name)
 
         while True:
             msgs = c.poll(float("Inf"))
             if len(msgs) == 0:
                 continue
-            update = list(msgs.values())[-1][-1].value
+            p = list(c.assignment())[-1]
+            m = list(msgs.values())[-1][-1]
+            print(dir(m))
             print("===================================")
-            print("Config change received: %s"%update)
-            self.__update_scoring_function(update)
+            print("Config change received: %s"%m.value)
+            self.__update_scoring_function(m.value)
             print("Config change affected")
             print("===================================")
+            #print(m.partition)
+            #print(dir(m.partition))
+            #partitions_for_topic_set = c.partitions_for_topic(self.scores_config_running_topic_name)
+            #if partitions_for_topic_set is None:
+            #    continue
+            #p = list(partitions_for_topic_set)[-1]
+            #print(p)
+            #print(partitions_for_topic_set)
+            #c.commit({p: m.offset})
+            #pdb.set_trace()
+            #c.commit({p: m.offset})
+            #c.seek_to_end(p)
 
     def __update_scoring_function(self, scoring_function_config: dict):
         """
